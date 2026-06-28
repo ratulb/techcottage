@@ -2,15 +2,6 @@
  * Greenish gradient theme — ported from mojo_programming / rust_programming sites
  *
  * --bg-gradient: linear-gradient(120deg, #0650b1, rgb(0, 128, 0));
- *
- * Usage: add to _config.yml
- *   include:
- *     - assets/css
- *   extra_css:
- *     - assets/css/style.css
- *
- * Then in layout files, link:
- *   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
  */
 
 :root {
@@ -41,7 +32,9 @@ html, body {
 .footer-heading,
 .footer-col-wrapper,
 .contact-list,
-.social-media-list a {
+.social-media-list a,
+.page-heading,
+.post-list-heading {
   color: #d4d4d8 !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
@@ -97,6 +90,13 @@ pre code {
   padding: 1rem;
   display: block;
   overflow-x: auto;
+}
+
+/* RSS subscribe link on home page */
+.rss-subscribe,
+.rss-subscribe a {
+  color: #d4d4d8 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
 
 /* Links in content area */
