@@ -15,4 +15,5 @@ header_pages:
 
 exclude:
   - AGENTS.md
+  - README.md
 
