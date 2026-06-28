@@ -10,3 +10,9 @@ plugins:
 show_excerpts: true
 permalink: /:year/:month/:title/
 
+header_pages:
+  - about.md
+
+exclude:
+  - AGENTS.md
+
