@@ -1,0 +1,112 @@
+From: /home/tenmoomnet/mojo_programming/site_source/extra.css
+(Full reference — MkDocs Material gradient implementation)
+
+:root {
+  --bg-gradient: linear-gradient(120deg, #0650b1, rgb(0, 128, 0));
+}
+html, body {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+}
+.md-header, .md-header--shadow, .md-footer, .md-footer-meta, .md-tabs,
+.md-sidebar--primary, .md-sidebar--secondary {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.md-header {
+  transition: none !important;
+}
+.md-search__form {
+  background-color: var(--md-code-bg-color) !important;
+}
+.md-search__form:hover {
+  background-color: #1c2333 !important;
+}
+.md-main {
+  background: transparent !important;
+}
+.md-nav--primary .md-nav__item--section .md-nav__list {
+  padding-left: 1.6rem;
+}
+[data-md-color-scheme="default"] {
+  --md-default-fg-color: #24292F;
+  --md-default-bg-color: #FAFAF8;
+  --md-primary-fg-color: transparent;
+  --md-primary-bg-color: #ffffff;
+  --md-accent-fg-color: #60a5fa;
+  --md-typeset-a-color: #60a5fa;
+  --md-code-bg-color: #161B22;
+  --md-code-fg-color: #E6EDF3;
+  --md-code-hl-number-color: #F472B6;
+  --md-code-hl-special-color: #F472B6;
+  --md-code-hl-function-color: #4ADE80;
+  --md-code-hl-constant-color: #FBBF24;
+  --md-code-hl-keyword-color: #38BDF8;
+  --md-code-hl-string-color: #A78BFA;
+  --md-code-hl-name-color: #E6EDF3;
+  --md-code-hl-operator-color: #94A3B8;
+  --md-code-hl-punctuation-color: #CBD5E1;
+  --md-code-hl-comment-color: #64748B;
+  --md-code-hl-generic-color: #94A3B8;
+  --md-code-hl-variable-color: #E6EDF3;
+  --md-footer-bg-color: transparent;
+  --md-footer-bg-color--dark: transparent;
+}
+h1, h2, h3, h4, h5, h6 {
+  color: #e6edf3 !important;
+}
+.md-typeset h1 {
+  font-size: 1em !important;
+}
+.md-nav__link {
+  color: #d4d4d8 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+.md-nav__link--active {
+  color: #93c5fd !important;
+}
+.md-header__title,
+.md-header__button.md-logo {
+  display: none !important;
+}
+.md-nav--primary > .md-nav__title {
+  display: none !important;
+}
+.md-typeset {
+  color: #d4d4d8;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.md-typeset blockquote {
+  color: #d4d4d8;
+}
+.md-typeset .grid.cards > ul > li {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.md-typeset .grid.cards > ul > li > :first-child {
+  color: #475569 !important;
+}
+.md-typeset .grid.cards hr + * {
+  color: #60a5fa;
+  font-weight: bold;
+}
+.md-typeset,
+.md-nav {
+  font-size: 16px;
+  line-height: 1.7;
+}
+@media screen and (min-width: 76.25em) {
+  .md-typeset,
+  .md-nav {
+    font-size: 18px;
+  }
+  .md-grid {
+    max-width: 1400px !important;
+    padding-left: 1.6rem;
+  }
+  .md-content__inner.md-typeset {
+    margin-right: 0;
+  }
+}
