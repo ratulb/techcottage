@@ -84,6 +84,10 @@ html, body {
   color: #d4d4d8 !important;
 }
 
+.post-list-heading {
+  font-weight: 300;
+}
+
 .home a,
 .home a:visited {
   color: #93c5fd !important;
