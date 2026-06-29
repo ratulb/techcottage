@@ -44,11 +44,21 @@ html, body {
   color: #ffffff !important;
 }
 
-/* Post content card — transparent */
-.post,
+/* Post parent container — visible boundary on gradient */
+.post {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  padding: 1.5rem 2rem;
+  color: #e6edf3;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Innermost content — seamless, no borders */
 .post-content {
   background: transparent;
-  padding: 1.5rem 2rem;
+  border: none;
+  box-shadow: none;
   color: #e6edf3;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
