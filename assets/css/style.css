@@ -81,6 +81,10 @@ html, body {
   color: #d4d4d8 !important;
 }
 
+.post-link {
+  font-weight: 300;
+}
+
 /* Code blocks */
 pre,
 code {
