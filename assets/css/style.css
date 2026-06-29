@@ -73,9 +73,12 @@ html, body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 
-.post-meta,
-.post-link {
-  color: #d4d4d8;
+/* Home page — uniform light text & links */
+.home,
+.home *,
+.home a,
+.home a:visited {
+  color: #e6edf3 !important;
 }
 
 /* Code blocks */
@@ -103,12 +106,6 @@ pre code {
   overflow-x: auto;
 }
 
-/* RSS subscribe link on home page */
-.rss-subscribe,
-.rss-subscribe a {
-  color: #d4d4d8 !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
-}
 
 /* Links in content area */
 .post-content a {
