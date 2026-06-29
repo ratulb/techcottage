@@ -55,6 +55,11 @@ html, body {
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
+.post-title {
+  font-size: 1.5rem;
+  font-weight: 300;
+}
+
 /* Innermost content — seamless, no borders */
 .post-content {
   background: transparent;
