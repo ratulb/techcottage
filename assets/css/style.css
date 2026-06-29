@@ -44,27 +44,29 @@ html, body {
   color: #ffffff !important;
 }
 
-/* Post content card — readable background */
+/* Post content card — transparent with shadow border */
 .post,
 .post-content {
-  background: rgba(255, 255, 255, 0.8);
+  background: transparent;
   padding: 1.5rem 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 4px 20px rgba(0,0,0,0.25);
+  color: #e6edf3;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
 /* Article list on home page */
 .post-list > li {
-  background: rgba(255, 255, 255, 0.8);
+  background: transparent;
   padding: 1rem 1.5rem;
   margin-bottom: 1rem;
   border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 4px 20px rgba(0,0,0,0.25);
 }
 
 .post-meta,
 .post-link {
-  color: inherit;
+  color: #d4d4d8;
 }
 
 /* Code blocks */
@@ -101,10 +103,26 @@ pre code {
 
 /* Links in content area */
 .post-content a {
-  color: #0650b1;
+  color: #93c5fd;
   text-decoration: underline;
 }
 
 .post-content a:hover {
-  color: rgb(0, 128, 0);
+  color: #ffffff;
+}
+
+/* Headings in content area */
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4,
+.post-content h5,
+.post-content h6 {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Inline code inside post content */
+.post-content code {
+  background-color: rgba(22, 27, 34, 0.8) !important;
 }
