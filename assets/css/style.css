@@ -80,10 +80,13 @@ html, body {
 
 /* Home page — uniform light text & links */
 .home,
-.home *,
+.home * {
+  color: #d4d4d8 !important;
+}
+
 .home a,
 .home a:visited {
-  color: #d4d4d8 !important;
+  color: #93c5fd !important;
 }
 
 .post-link {
