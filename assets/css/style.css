@@ -51,7 +51,7 @@ html, body {
   border-radius: 6px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   padding: 1.5rem 2rem;
-  color: #e6edf3;
+  color: #d4d4d8;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
@@ -60,7 +60,7 @@ html, body {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: #e6edf3;
+  color: #d4d4d8;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
@@ -78,7 +78,7 @@ html, body {
 .home *,
 .home a,
 .home a:visited {
-  color: #e6edf3 !important;
+  color: #d4d4d8 !important;
 }
 
 /* Code blocks */
