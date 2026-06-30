@@ -1,9 +1,10 @@
 ---
-title: "From Bytes to Gradients: Tracing a Neural Network Through [Tenmo](2026-06-30-from-raw-text-to-word-vectors-with-tenmo.md), One Layer at a Time"
+title: "From Bytes to Gradients: Tracing a Neural Network Through Tenmo, One Layer at a Time"
 date: "2026-06-30"
 categories: ["Machine Learning", "Mojo"]
 tags: ["autograd", "mojo", "tensor-library", "systems-programming", "deep-learning"]
 excerpt: "A line-by-line trace of one MNIST training step through Tenmo — from raw memory allocation, through SIMD-vectorized matmul and compile-time autograd, to the SGD parameter update — all in pure Mojo, no Python, no CUDA."
+tenmo_link: https://github.com/ratulb/tenmo
 ---
 
 When you call `loss.backward()` in PyTorch, a C++ autograd engine climbs the computation graph in reverse, multiplying Jacobians until every leaf tensor has its gradient filled in. It works. It's fast. But the graph lives in C++ libraries you never see — `torch::autograd::Engine`, `THPVariable`, `VariableType` — hundreds of thousands of lines built over a decade.
