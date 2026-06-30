@@ -161,6 +161,8 @@ For the first layer `(64, 784) × (784, 128)`, `m=64, n=784, p=128`. Tracing thr
 
 Result: `MmCpu2d[float32, 32, 64, 128]` — the `tile_m=32` branch of the 18-way dispatch table.
 
+Note the `tile_p=128` choice. If the selector had chosen `tile_p=256` instead (which it does when `p > 256`), the SIMD unrolled loop would process 32 columns per iteration but only 128 exist — the inner loop fires 4 times before hitting the self-tail section, wasting most of the unrolled accumulators. The `p > 64` check that picks 128 over 256 is the difference between a saturated FMA pipeline and a loop that spends half its iterations in scalar fallback.
+
 Inside the selected tile configuration, the hot loop processes columns in groups of `simd_unroll = simdwidth × UNROLL` (for float32 with AVX2: `8 × 4 = 32` columns per iteration):
 
 ```mojo
@@ -336,7 +338,27 @@ def _step_no_momentum[simd_w: Int](self, param_ptr, grad_ptr, num_elements):
         param_ptr.store[width=simd_w](j, p_vec)
 ```
 
-On GPU, the update launches an in-place kernel (`sgd_kernel.mojo`) without any CPU round-trip. The kernel reads `param` and `grad` from GPU memory, applies the update, and writes back — all on-device.
+On GPU, the update launches an in-place kernel (`sgd_kernel.mojo`) without any CPU round-trip. The kernel reads `param` and `grad` from GPU memory, applies the update, and writes back — all on-device:
+
+```mojo
+def sgd_step_no_momentum_kernel[dtype: DType](
+    param: UnsafePointer[Scalar[dtype], MutAnyOrigin],
+    grad: UnsafePointer[Scalar[dtype], ImmutAnyOrigin],
+    num_elements: Int, lr: Scalar[dtype], weight_decay: Scalar[dtype],
+):
+    var gtid = Int(thread_idx.x) + Int(block_idx.x) * Int(block_dim.x)
+    var stride = Int(block_dim.x) * Int(grid_dim.x)
+    var i = gtid
+    while i < num_elements:
+        var p = param[i]
+        var g = grad[i]
+        if weight_decay > 0:
+            g += p * weight_decay
+        param[i] = p - lr * g
+        i += stride
+```
+
+Each thread handles strided elements across the parameter array — a classic GPU element-wise pattern. The momentum variant adds a velocity buffer read/write and the momentum term `v = momentum * v + g`.
 
 The optimizer supports sparse row-wise updates for embedding layers: when `indices` are provided, only specific rows of 2D parameters are updated. This was critical for word2vec-style training where only ~10 rows out of 252K receive gradient each step — a 25000× reduction in write traffic.
 
@@ -409,12 +431,12 @@ Training the same 4-layer MLP on identical hardware (15 epochs, batch_size=64, a
 
 | Platform | Device | Avg Epoch Time | Total Time | Final Val Acc |
 |---|---|---|---|---|
-| **Tenmo** | **CPU (Mojo)** | **5.5s** | **82.3s** | **98.14%** |
-| **Tenmo** | **GPU (Mojo)** | **6.0s** | **90.1s** | **98.00%** |
+| Tenmo | CPU (Mojo) | 5.5s | 82.3s | 98.14% |
+| Tenmo | GPU (Mojo) | 6.0s | 90.1s | 98.00% |
 | PyTorch | GPU (CUDA) | 14.5s | 217.2s | 98.18% |
 | PyTorch | CPU | 15.4s | 231.5s | 98.12% |
 
-**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine before GPU launch overhead pays off.
+**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine before GPU launch overhead pays off. On a model this small, each GPU kernel launch has too few elements to amortize its dispatch cost — the MNIST MLP does 13 kernels per forward/backward step, each with 64 rows or fewer, and the cumulative launch latency exceeds the compute time. We include the GPU number because it's an honest measurement: Tenmo's GPU path is correct and matches PyTorch GPU behavior, but small models don't benefit. The fusion work described in the Cross-Entropy section is exactly the strategy that will close this gap.
 
 Each design choice has a measurable payoff:
 
