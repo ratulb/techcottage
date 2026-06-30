@@ -12,10 +12,13 @@ layout: default
       <li>
         {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
         <span class="post-meta">{{ post.date | date: date_format }}</span>
-        <h3>
+         <h3>
           <a class="post-link" href="{{ post.url | relative_url }}">
             {{ post.title }}
           </a>
+          {%- if post.tenmo_link -%}
+            <a href="{{ post.tenmo_link }}" class="post-tenmo-link" target="_blank" rel="noopener">[Tenmo]</a>
+          {%- endif -%}
         </h3>
         {%- if site.show_excerpts -%}
           {{ post.excerpt }}

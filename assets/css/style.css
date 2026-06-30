@@ -97,6 +97,19 @@ html, body {
   font-weight: 300;
 }
 
+.post-tenmo-link,
+.post-tenmo-link:visited {
+  font-weight: 300;
+  color: #93c5fd;
+  text-decoration: underline;
+  font-size: 1rem;
+  margin-left: 0.3em;
+}
+
+.post-tenmo-link:hover {
+  color: #ffffff;
+}
+
 /* Code blocks */
 pre,
 code {
