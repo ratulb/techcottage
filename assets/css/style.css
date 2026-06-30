@@ -163,3 +163,19 @@ pre code {
 .post-content code {
   background-color: rgba(22, 27, 34, 0.8) !important;
 }
+
+/* Tables in post content */
+.post-content table {
+  color: #d4d4d8;
+  border-color: rgba(255,255,255,0.15);
+}
+
+.post-content table tr {
+  background: transparent !important;
+}
+
+.post-content table th,
+.post-content table td {
+  color: #d4d4d8;
+  border-color: rgba(255,255,255,0.15);
+}
