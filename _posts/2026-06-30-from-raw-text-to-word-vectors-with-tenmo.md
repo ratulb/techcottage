@@ -210,7 +210,37 @@ We store two views of the data:
 - **`tokenized_reviews`**: each review as a separate list of token IDs. This lets us build context windows within a single review (we never want context crossing review boundaries).
 - **`concatenated_tokens`**: every token ID from every review concatenated into one flat list. This is used for random negative sampling — we draw negative samples uniformly from the entire corpus.
 
-Let's ground this in numbers. The IMDB dataset has 25K training reviews. After filtering for strong sentiment and limiting to 5,000 reviews (for speed), we get a vocabulary of roughly **80K–120K unique words** and about **5 million total tokens**. Our embedding matrix is `vocab_size × 100`, or about 8M–12M parameters — a reasonable size for training on a single machine.
+Let's trace where each number comes from in the code.
+
+**Vocabulary size: 252,001.** The `NegativeSampler.init_tokenizer_and_datasets()` method loads every review from `aclImdb/train/pos/` and `aclImdb/train/neg/`, filtering by rating — only reviews with ratings ≥7 or ≤4 qualify. IMDB has 12,500 positive and 12,500 negative training reviews; roughly half of each side passes the rating filter, leaving about 12,000 qualifying reviews. All of them are passed to `Tokenizer.from_text_lines(all_comments)`, which collects every unique word via Python's `set()`:
+
+```python
+all_words = py.list(py.set(all_words))     # unique words only
+all_words = py.sorted(all_words)
+```
+
+Then `UNKNOWN_TOKEN` is prepended at index 0. The result is 252,001 unique word types — every rare name, typo, number, and foreign word from 12,000 movie reviews, all sorted alphabetically.
+
+**5,000 reviews for training, not 12,000.** The constant `MAX_REVIEWS_TO_USE = 5000` (line 470) limits the training loop to the first 5,000 tokenized reviews. The vocabulary is built *before* this limit, so the embedding tables are dimensioned for the full 252K vocabulary even though we only iterate over 5K reviews.
+
+**50 million parameters.** The embedding matrices are created with the full vocabulary size:
+
+```mojo
+var input_embeddings = Tensor[dtype].rand(
+    Shape(vocabulary_size, EMBEDDING_DIMENSION), ...
+)
+var output_embeddings = Tensor[dtype].rand(
+    Shape(vocabulary_size, EMBEDDING_DIMENSION), ...
+)
+```
+
+Each is `252,001 × 100 = 25,200,100` elements. Two tables → **50,400,200 parameters** (~50.4M). The console confirms:
+
+```
+Vocabulary size:  252001
+Embedding Dimension:   100
+Reviews Used:          5000 of 25000
+```
 
 ## Stage 2: Token Embedding Approaches — A Landscape
 
@@ -273,9 +303,9 @@ This produces a variable-length context window centered on each target word. Wor
 
 The probability of the target word given the context words is computed using the **softmax** over the entire vocabulary:
 
-```
-P(w_target | context) = exp(score(w_target, context)) / Σ_v exp(score(v, context))
-```
+$$
+P(w_{\text{target}} \mid \text{context}) = \frac{\exp(\text{score}(w_{\text{target}}, \text{context}))}{\sum_v \exp(\text{score}(v, \text{context}))}
+$$
 
 Here, `score(w_t, context)` is a measure of compatibility between the target word and the averaged context. Word2vec uses **two embedding matrices** to compute this:
 
@@ -324,17 +354,19 @@ For each real (target, context) pair (a *positive sample*), we generate K *negat
 
 The objective function for a single training example:
 
-```
-J = log σ(u · v) + Σ_{k=1}^{K} E_{w_k ~ P_n}[log σ(-u_k · v)]
-```
+$$
+J = \log \sigma(\mathbf{u} \cdot \mathbf{v}) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n}[\log \sigma(-\mathbf{u}_k \cdot \mathbf{v})]
+$$
 
 Where:
-- `u` is the embedding of the candidate word (target or negative sample) — looked up from `output_embeddings`
-- `v` is the averaged context embedding — computed from `input_embeddings`
-- `σ()` is the sigmoid function
-- `P_n(w)` is the noise distribution — we draw negative samples from it
+- $\mathbf{u}$ is the embedding of the candidate word (target or negative sample) — looked up from `output_embeddings`
+- $\mathbf{v}$ is the averaged context embedding — computed from `input_embeddings`
+- $\sigma(\cdot)$ is the sigmoid function
+- $P_n(w)$ is the noise distribution — we draw negative samples from it
 
 The first term pushes the target word's output embedding and the context vector together. Each term in the second sum pushes a random noise word's output embedding and the context vector apart.
+
+This equation is binary cross-entropy in disguise. Every $\log \sigma(\cdot)$ term is paired with an implicit label: the positive term has label 1, which maximizes $\log \sigma(\cdot)$ when the dot product is large and positive; the negative terms have label 0, which maximizes $\log \sigma(-(\cdot))$ — equivalent to $\log(1 - \sigma(\cdot))$ via sigmoid symmetry $\sigma(-x) = 1 - \sigma(x)$. The expectation $\mathbb{E}_{w_k \sim P_n}$ is a Monte Carlo estimate: instead of summing over the full vocabulary (which is the softmax), we draw $K$ random words from the noise distribution and average their contributions. With $K$ typically between 5 and 20, we replace an $O(V)$ sum with $O(K)$ samples — the entire point of negative sampling.
 
 ## K+1 Binary Classifications Instead of One V-Way Classification
 
