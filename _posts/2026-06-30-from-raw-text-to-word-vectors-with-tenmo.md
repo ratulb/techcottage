@@ -506,7 +506,7 @@ After each epoch, we check that gradients are actually flowing:
 var final_weight_sum = input_embeddings.sum[track_grad=False]().item()
 var weight_change = final_weight_sum - initial_weight_sum
 print(
-    "\n  ✓ Weight sum change:",
+    "\nWeight sum change:",
     weight_change,
     "(should be != 0 — proves gradients are flowing!)"
 )
@@ -590,67 +590,6 @@ The demo output, when the training converges, shows:
 
 Most neighbors are negative-sentiment words (*horrible*, *boring*, *ridiculous*), which is expected — "terrible" lives in negative semantic space. A couple of positive words (*wonderful*, *fantastic*) also appear, which may reflect shared intensity or syntactic patterns in the training data. If the embeddings were random or poorly trained, we'd see unrelated words like "the", "movie", or "and" clustering at the top. The fact that the nearest neighbors are mostly semantically related is evidence that the training worked.
 
-## Stage 7: Common Pitfalls
-
-Over the course of implementing this, we hit several issues worth highlighting.
-
-## Pitfall 1: Gradient Explosion from Unnormalized Context
-
-The initial version of the code summed context word embeddings without averaging. The problem: longer context windows (say 8 words) would produce larger gradient magnitudes than shorter ones (say 2 words). The model would oscillate, paying more attention to words in longer windows simply because they had more signal.
-
-**Fix (forward):** Divide the summed context embedding by the context length.
-
-```mojo
-var averaged_context = context_embedding / Float32(context_length)
-```
-
-But there's a second half to this fix. The backward pass applies the chain rule through the averaging: if `forward = sum(embeddings) / C`, then `dL/d(embedding_i) = gradient_context / C`. If you only fix the forward pass but still compute `context_update = -gradient * lr` in the backward, the gradient is wrong by a factor of C. The update ends up C times too large for long windows and C times too small for short ones (because the gradient itself was scaled by the averaging, and you need to scale the update to match).
-
-**Fix (backward):** Divide the context update by the context length.
-
-```mojo
-var context_update = -gradient_context * Float32(LEARNING_RATE) / Float32(context_length)
-```
-
-## Pitfall 2: Sigmoid Saturation at Initialization
-
-If the initial dot products are too large (say, > 5 in magnitude), sigmoid saturates — it produces values very close to 0 or 1, where the gradient is nearly zero. The model stops learning because the gradient vanishes.
-
-**Fix:** Initialize input embeddings to uniform random in [-0.1, 0.1] and output embeddings to zeros. Small initial magnitudes keep dot products in the linear region of sigmoid (around 0, where the gradient is ≈ 0.25). This is also why the autograd variant initializes output embeddings with an even smaller range [-0.01, 0.01].
-
-## Pitfall 3: scatter_add vs. Direct Assignment
-
-The gradient update must **add** to existing embeddings, not replace them. If you write `embeddings[rows] = embeddings[rows] + update`, you create a temporary tensor, modify it, and write it back. `scatter_add` does the same operation in-place without extra memory allocations.
-
-This matters at scale. When training on 5 million tokens with 5 context words each, you're making 25 million sparse updates per epoch. Even a small per-update allocation balloon — a Mojo temporary NDBuffer created and immediately freed — adds up to hundreds of millions of short-lived allocations.
-
-## Pitfall 4: Token ID Validation
-
-If a token ID exceeds the vocabulary size, the embedding gather returns garbage (or crashes). This seems obvious, but it's easy to get wrong when you have preprocessing logic (cleaning, filtering, encoding) that might produce IDs from the *training* vocabulary that don't match the *full* vocabulary.
-
-Our code validates every single encoding:
-
-```mojo
-var max_id = 0
-for id in token_ids:
-    if id > max_id: max_id = id
-if max_id >= len(tokenizer):
-    print("ERROR: Token ID out of vocabulary range!")
-    break
-```
-
-This check runs during data loading and catches mismatches immediately.
-
-## Pitfall 5: The Autograd Overhead Trap
-
-The initial version of this code used Tenmo's autograd framework (the `track_grad=True` path with `.backward()` and `SGD.step()`). This was **16× slower** than the manual approach, even though both compute the same gradients. Why?
-
-The optimizer's `.step()` iterates over **every row** of the embedding matrix — all 100K × 100 = 10M parameters — even though only ~10 rows (1,000 elements) actually received gradient updates per step. The `scatter_add` in the manual version touches only those 10 rows. The autograd optimizer has no concept of sparsity: it applies `weight -= lr * weight.grad` unconditionally to every parameter.
-
-This is not a Tenmo limitation — every autograd framework from PyTorch to JAX works the same way. **Dense optimizers assume dense updates.** For sparse lookup tasks like word embeddings, the gradient matrix is >99.99% zero, and a dense optimizer wastes proportional time on no-ops. This is exactly the pattern that sparse optimizers (like AdaGrad's per-feature learning rate) were invented to solve.
-
-Tenmo's `Filler.scatter_add` lets us skip the optimizer entirely for sparse workloads. It applies gradients to only the rows we touched during the forward pass, which is exactly the right semantic for word2vec. Tenmo is already capable of this gradient scattering — we lean on it directly rather than going through the optimizer.
-
 ## Why Tenmo?
 
 This implementation highlights a few of Tenmo's design strengths:
@@ -676,10 +615,8 @@ We built the full pipeline from raw text to word vectors using Tenmo:
 The final implementation trains on 5,000 IMDB reviews, producing word vectors where "terrible" is close to "awful", "horrible", and "dreadful" — without ever being told that these words are related. The model learned it purely from the statistics of word co-occurrence in raw text.
 
 **Next steps to explore:**
-- Try the autograd variant in [`working/negative_sampling_emb.mojo`](https://github.com/ratulb/tenmo/blob/dev/working/negative_sampling_emb.mojo) in the tenmo repo — it uses Tenmo's `Embedding` module with `BCEWithLogitsLoss` and `SGD`. It's slower (dense optimizer on sparse problem) but demonstrates how the same algorithm composes with Tenmo's autograd framework.
 - Swap negative sampling for hierarchical softmax and compare training speed and embedding quality.
 - Move to a larger corpus (Wikipedia dumps are a common next step) and use subword tokenization (BPE) instead of word-level tokens.
-- Probe the embedding space for analogies: "king − man + woman = ?" — if the vectors capture relational semantics, the nearest neighbor to the result should be "queen."
 
 The full code (around 750 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
 
