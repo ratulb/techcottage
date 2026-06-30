@@ -436,7 +436,7 @@ Training the same 4-layer MLP on identical hardware (15 epochs, batch_size=64, a
 | PyTorch | GPU (CUDA) | 14.5s | 217.2s | 98.18% |
 | PyTorch | CPU | 15.4s | 231.5s | 98.12% |
 
-**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine before GPU launch overhead pays off. On a model this small, each GPU kernel launch has too few elements to amortize its dispatch cost — the MNIST MLP does 13 kernels per forward/backward step, each with 64 rows or fewer, and the cumulative launch latency exceeds the compute time. We include the GPU number because it's an honest measurement: Tenmo's GPU path is correct and matches PyTorch GPU behavior, but small models don't benefit. The fusion work described in the Cross-Entropy section is exactly the strategy that will close this gap.
+**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine[^1] before GPU launch overhead pays off. On a model this small, each GPU kernel launch has too few elements to amortize its dispatch cost — the MNIST MLP does 13 kernels per forward/backward step, each with 64 rows or fewer, and the cumulative launch latency exceeds the compute time. We include the GPU number because it's an honest measurement: Tenmo's GPU path is correct and matches PyTorch GPU behavior, but small models don't benefit. The fusion work described in the Cross-Entropy section is exactly the strategy that will close this gap.
 
 Each design choice has a measurable payoff:
 
@@ -461,3 +461,5 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 **`stop_grad=True` breaks graph flow.** If you transfer weights to GPU with `stop_grad=True`, the model's parameters become GPU leaves. Input tensors transferred with `stop_grad=False` (default) can still carry gradients from the loss back to their CPU origin, but the weights' gradients accumulate on the GPU parameters. This is usually what you want, but it means `model.to_cpu(stop_grad=True)` creates new CPU leaves — the GPU weight values are copied, but the CPU copy won't receive future gradients.
 
 ---
+
+[^1]: "Saturates the machine" means the CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
