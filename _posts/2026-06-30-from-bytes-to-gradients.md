@@ -6,8 +6,6 @@ tags: ["autograd", "mojo", "tensor-library", "systems-programming", "deep-learni
 excerpt: "A line-by-line trace of one MNIST training step through Tenmo — from raw memory allocation, through SIMD-vectorized matmul and compile-time autograd, to the SGD parameter update — all in pure Mojo, no Python, no CUDA."
 ---
 
-# From Bytes to Gradients: Tracing a Neural Network Through Tenmo, One Layer at a Time
-
 When you call `loss.backward()` in PyTorch, a C++ autograd engine climbs the computation graph in reverse, multiplying Jacobians until every leaf tensor has its gradient filled in. It works. It's fast. But the graph lives in C++ libraries you never see — `torch::autograd::Engine`, `THPVariable`, `VariableType` — hundreds of thousands of lines built over a decade.
 
 What if you could read *every line* of the system between `loss.backward()` and the weight update? That's the premise of Tenmo, a tensor library and neural network framework written entirely in Mojo. Every autograd dispatch, every SIMD matmul kernel, every GPU launch is in one repository under 100 source files.
