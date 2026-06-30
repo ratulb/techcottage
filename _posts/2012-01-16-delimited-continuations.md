@@ -3,6 +3,7 @@ layout: post
 title: "Delimited continuations"
 date: 2012-01-16 08:24:00+00:00
 tags: [delimited continuation, scala, continuation, CPS]
+excerpt: "Understanding Scala's delimited continuations by building a framework to capture and remotely execute frozen computations."
 ---
 
 There have been a lot of blog posts, questions & answers about scala's delimited continuation. I would not again try to confuse the reader with another lame-duck explaination. I would, instead, present it as I have come to understand it and then go on to develop a basic framework where we capture a part of a computation and send that frozen computation to a remote machine where it gets executed and result of that computation is sent back to the criginal machine.     
