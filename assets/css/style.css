@@ -95,15 +95,21 @@ html, body {
 
 .post-link {
   font-weight: 300;
+  display: inline;
 }
 
 .post-tenmo-link,
 .post-tenmo-link:visited {
   font-weight: 300;
-  color: #93c5fd;
+  color: #fbbf24;
   text-decoration: underline;
-  font-size: 1rem;
-  margin-left: 0.3em;
+  font-size: 1.5rem;
+  margin-left: 0.25em;
+}
+
+.home .post-tenmo-link,
+.home .post-tenmo-link:visited {
+  color: #fbbf24 !important;
 }
 
 .post-tenmo-link:hover {
