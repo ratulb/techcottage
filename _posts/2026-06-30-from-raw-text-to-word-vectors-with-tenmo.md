@@ -554,24 +554,23 @@ The steps are worth noting:
 
 This is intentionally simple — we use Euclidean distance rather than cosine similarity because it's cheaper to compute (no normalization step). In practice, for unit vectors, Euclidean distance and cosine similarity produce the same rankings.
 
-The demo output, when the training converges, shows something like:
+The demo output, when the training converges, shows:
 
 ```
 🔍 Words similar to 'terrible':
-    awful      → similarity: -2.3
-    horrible   → similarity: -2.4
-    dreadful   → similarity: -2.7
-    disgusting → similarity: -2.7
-    boring     → similarity: -2.9
-    ridiculous → similarity: -2.9
-    pathetic   → similarity: -2.9
-    miserable  → similarity: -3.0
-    sad        → similarity: -3.0
-    bad        → similarity: -3.1
+   horrible → similarity: -1.4567126
+   boring → similarity: -2.1396909
+   wonderful → similarity: -2.1462088
+   ridiculous → similarity: -2.1734316
+   weak → similarity: -2.276786
+   stupid → similarity: -2.280788
+   fantastic → similarity: -2.2870705
+   lame → similarity: -2.2934372
+   simple → similarity: -2.2952878
+   poor → similarity: -2.3172371
 ```
-*(Values are illustrative — exact numbers depend on random initialization and training convergence.)*
 
-Every one of these is a negative-sentiment word — exactly what "terrible" should be close to. If the embeddings were random or poorly trained, we'd see unrelated words like "the", "movie", or "and" in the top results. The fact that the nearest neighbors are semantically related synonyms is evidence that the training worked.
+Most neighbors are negative-sentiment words (*horrible*, *boring*, *ridiculous*), which is expected — "terrible" lives in negative semantic space. A couple of positive words (*wonderful*, *fantastic*) also appear, which may reflect shared intensity or syntactic patterns in the training data. If the embeddings were random or poorly trained, we'd see unrelated words like "the", "movie", or "and" clustering at the top. The fact that the nearest neighbors are mostly semantically related is evidence that the training worked.
 
 ## Stage 7: Common Pitfalls
 
