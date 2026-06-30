@@ -18,3 +18,7 @@ exclude:
   - AGENTS.md
   - README.md
 
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
+  enable_coderay: false
