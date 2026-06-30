@@ -1,5 +1,5 @@
 ---
-title: "From Raw Text to Word Vectors: Building a Tokenizer and Word Embeddings with Tenmo"
+title: "From Raw Text to Word Vectors: Building a Tokenizer and Word Embeddings with <a href='https://github.com/ratulb/tenmo'>Tenmo</a>"
 date: "2026-06-30"
 categories: ["Natural Language Processing", "Mojo", "Tenmo"]
 tags: ["word-embeddings", "mojo", "tenmo", "nlp", "from-scratch", "word2vec", "negative-sampling", "tokenizer"]
