@@ -438,4 +438,5 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 **Gradbox lifespan confusion.** Gradboxes have their own refcount. If you save `tensor.grad()` to a variable, it returns a deep copy via `Gradbox.detach()` — a fresh allocation with independent data. The internal gradbox remains untouched by subsequent `zero_grad()` calls. The detached copy is safe to use, but it's not linked to the parameter anymore.
 
 **`stop_grad=True` breaks graph flow.** If you transfer weights to GPU with `stop_grad=True`, the model's parameters become GPU leaves. Input tensors transferred with `stop_grad=False` (default) can still carry gradients from the loss back to their CPU origin, but the weights' gradients accumulate on the GPU parameters. This is usually what you want, but it means `model.to_cpu(stop_grad=True)` creates new CPU leaves — the GPU weight values are copied, but the CPU copy won't receive future gradients.
+
 ---
