@@ -161,7 +161,7 @@ For the first layer `(64, 784) × (784, 128)`, `m=64, n=784, p=128`. Tracing thr
 
 Result: `MmCpu2d[float32, 32, 64, 128]` — the `tile_m=32` branch of the 18-way dispatch table.
 
-Note the `tile_p=128` choice. If the selector had chosen `tile_p=256` instead (which it does when `p > 256`), the SIMD unrolled loop would process 32 columns per iteration but only 128 exist — the inner loop fires 4 times before hitting the self-tail section, wasting most of the unrolled accumulators. The `p > 64` check that picks 128 over 256 is the difference between a saturated FMA pipeline and a loop that spends half its iterations in scalar fallback.
+Note the `tile_p=128` choice. The `p > 64` check that picks 128 over 256 when `p=128` is about L1 cache capacity, not SIMD utilization. Tile_P controls the outer `j_tile` stride — how many columns of B are loaded per `k_tile` pass and reused across all rows in the tile. With `TILE_N=64` and `TILE_P=256`, the B j-tile is `64 × 256 × 4 bytes = 64 KB`, which overflows L1 data cache (32 KB). With `TILE_P=128`, it's `64 × 128 × 4 = 32 KB`, fitting perfectly. The inner SIMD unrolled loop (32 columns per iteration) is equally efficient in either case — `j_end = min(j_tile + TILE_P, p)` caps it at the actual 128 columns regardless of `TILE_P`, so 4 iterations of 32 columns fully cover the output with no tail.
 
 Inside the selected tile configuration, the hot loop processes columns in groups of `simd_unroll = simdwidth × UNROLL` (for float32 with AVX2: `8 × 4 = 32` columns per iteration):
 
