@@ -3,11 +3,11 @@ title: "From Raw Text to Word Vectors: Building a Tokenizer and Word Embeddings 
 tenmo_link: https://github.com/ratulb/tenmo
 date: "2026-06-30"
 categories: ["Natural Language Processing", "Mojo", "Tenmo"]
-tags: ["word-embeddings", "mojo", "tenmo", "nlp", "from-scratch", "word2vec", "negative-sampling", "tokenizer"]
+tags: ["word-embeddings", "mojo", "tenmo", "nlp", "from-scratch", "word2vec", "negative-sampling", "tokenizer", "cbow"]
 excerpt: >
   We build word2vec-style embeddings from scratch with Tenmo (a tensor library
-  built in Mojo) — starting with a custom tokenizer, then training a skip-gram
-  model with negative sampling on IMDB reviews, and finally probing the learned
+  built in Mojo) — starting with a custom tokenizer, then training a CBOW model
+  with negative sampling on IMDB reviews, and finally probing the learned
   vectors for semantic similarity.
 ---
 
@@ -17,7 +17,7 @@ This single equation — the notion that arithmetic on word vectors reveals sema
 
 How does that work? And more importantly, how do we build it from scratch?
 
-In this post, we'll implement the full pipeline using **Tenmo** — a tensor library and neural network framework built in Mojo with full autograd, SIMD-optimized kernels, and GPU support. We'll build a tokenizer that converts raw movie reviews into integer IDs, a skip-gram training loop with negative sampling, and a similarity probe that lets us query the learned embedding space. The entire implementation lives in a single file — around 750 lines — and trains on the IMDB review dataset.
+In this post, we'll implement the full pipeline using **Tenmo** — a tensor library and neural network framework built in Mojo with full autograd, SIMD-optimized kernels, and GPU support. We'll build a tokenizer that converts raw movie reviews into integer IDs, a CBOW training loop with negative sampling, and a similarity probe that lets us query the learned embedding space. The entire implementation lives in a single file — around 750 lines — and trains on the IMDB review dataset.
 
 ## The Problem: Computers Don't Read
 
@@ -236,22 +236,22 @@ Within prediction-based methods, there are two main architectures:
 - **CBOW (Continuous Bag of Words):** Given the context words, predict the target word. Fast to train, but less effective for rare words.
 - **Skip-gram:** Given the target word, predict the context words. Slower to train, but produces better vectors for rare words.
 
-We'll use **Skip-gram** because it tends to produce higher-quality embeddings, especially for the long tail of rare words.
+We'll use **CBOW**. The intuition: given "the, cat, on, the", predict "sat". CBOW averages the context word embeddings into a single vector, then scores candidate words against it. It's simpler to implement with manual gradients — a single average instead of per-context-word gradient distribution — and faster to train per step since each training example processes one target word instead of C context words.
 
-## Stage 3: The Skip-gram Idea
+## Stage 3: The CBOW Idea
 
-Skip-gram is built on a simple intuition from linguistics: **"a word is known by the company it keeps."** Words that appear in similar contexts have similar meanings.
+CBOW (Continuous Bag of Words) is built on a simple intuition from linguistics: **"a word is known by the company it keeps."** Words that appear in similar contexts have similar meanings.
 
-The skip-gram training objective:
+The CBOW training objective:
 
 ```
-Given a target word w_t, maximize the probability of seeing
-each context word w_{t+j} within a window of size C.
+Given context words w_{t-C}, ..., w_{t-1}, w_{t+1}, ..., w_{t+C},
+maximize the probability of seeing the target word w_t.
 ```
 
 In the sentence *"The cat sat on the mat"*, with a window size of 2 around *sat*:
-- Target: *sat*
 - Context: [*the, cat, on, the*]
+- Target: *sat*
 
 For every target position in every review, we collect the surrounding words within the window:
 
@@ -271,18 +271,35 @@ context_indices.extend(review[right_context].copy())
 
 This produces a variable-length context window centered on each target word. Words closer to the target are included more reliably; the asymmetric edges of documents naturally get fewer context words, which is fine — the model learns to handle varying amounts of context.
 
-The probability of a context word given a target word is computed using the **softmax** over the entire vocabulary:
+The probability of the target word given the context words is computed using the **softmax** over the entire vocabulary:
 
 ```
-P(w_context | w_target) = exp(score(w_context, w_target)) / Σ_v exp(score(v, w_target))
+P(w_target | context) = exp(score(w_target, context)) / Σ_v exp(score(v, context))
 ```
 
-Here, `score(w_c, w_t)` is the dot product between the **output embedding** of the context word and the **input embedding** of the target word. Wait — input and output embeddings? Yes, word2vec uses **two embedding matrices**:
+Here, `score(w_t, context)` is a measure of compatibility between the target word and the averaged context. Word2vec uses **two embedding matrices** to compute this:
 
-- **Input embeddings** (`vocab_size × hidden_size`): one vector per word as a *target*. These are what we'll eventually use as our word vectors.
-- **Output embeddings** (`vocab_size × hidden_size`): one vector per word as a *context*. These exist only to compute compatibility scores.
+- **Input embeddings** (`vocab_size × hidden_size`): used to represent the *context* words. We gather the embeddings for every context word in the window and average them into a single context vector. These are what we'll eventually use as our word vectors.
+- **Output embeddings** (`vocab_size × hidden_size`): used to represent the *candidate* word (either the target or a negative sample). Each candidate gets its own embedding, and the score is the dot product between this output embedding and the averaged context vector.
 
-The asymmetry is intentional. A word acting as a target should be close in vector space to words that appear near it as contexts. Having two sets of weights makes the optimization easier — the model has separate parameters for each role.
+In our code, the context words are looked up from `input_embeddings` and the target + negatives from `output_embeddings`:
+
+```mojo
+var context_embedding = input_embeddings.gather[track_grad=False](
+    context_indices, reduction=Reduction(1)
+)
+var averaged_context = context_embedding / Float32(context_length)
+
+var sample_embeddings = output_embeddings.gather[track_grad=False](
+    sample_indices
+)
+
+var predicted_scores = sample_embeddings.matmul[
+    mode=mv, track_grad=False
+](averaged_context).sigmoid()
+```
+
+The asymmetry is intentional. Each word has two representations — one for when it acts as surrounding context and one for when it's the candidate being scored. Having separate parameters makes the optimization easier, and the input embeddings end up as our final word vectors.
 
 ## The Softmax Wall
 
@@ -308,16 +325,16 @@ For each real (target, context) pair (a *positive sample*), we generate K *negat
 The objective function for a single training example:
 
 ```
-J = log σ(u_c · v_t) + Σ_{k=1}^{K} E_{w_k ~ P_n}[log σ(-u_k · v_t)]
+J = log σ(u · v) + Σ_{k=1}^{K} E_{w_k ~ P_n}[log σ(-u_k · v)]
 ```
 
 Where:
-- `u_c` is the output embedding of the context word
-- `v_t` is the input embedding of the target word
+- `u` is the embedding of the candidate word (target or negative sample) — looked up from `output_embeddings`
+- `v` is the averaged context embedding — computed from `input_embeddings`
 - `σ()` is the sigmoid function
 - `P_n(w)` is the noise distribution — we draw negative samples from it
 
-The first term pushes the target and context vectors together. Each term in the second sum pushes the target and a random noise word apart.
+The first term pushes the target word's output embedding and the context vector together. Each term in the second sum pushes a random noise word's output embedding and the context vector apart.
 
 ## K+1 Binary Classifications Instead of One V-Way Classification
 
@@ -437,7 +454,7 @@ The most performance-critical part of the loop: updating only the rows of the em
 
 ```mojo
 # Update Input Embeddings
-var context_update = -gradient_context * Float32(LEARNING_RATE)
+var context_update = -gradient_context * Float32(LEARNING_RATE) / Float32(context_length)
 var context_update_broadcast = context_update.unsqueeze(0)
 var context_update_matrix = context_update_broadcast.repeat[
     track_grad=False
@@ -467,7 +484,7 @@ Filler[dtype].scatter_add(
 
 Here's what's happening:
 
-1. **Compute the update.** `context_update = -gradient * lr` gives us the negative gradient direction scaled by the learning rate. The negative sign because gradient descent moves opposite to the gradient.
+1. **Compute the update.** `context_update = -gradient * lr / context_length` gives us the negative gradient direction scaled by the learning rate and **divided by the context length**. The division by context_length is critical: in the forward pass, we divided the summed context embeddings by context_length (averaging), so the chain rule requires us to divide the gradient by context_length as well. Without this, longer context windows would get disproportionately large updates, and the model would oscillate.
 
 2. **Broadcast to a matrix.** The context gradient is a single vector, but we need to add it to multiple rows of the embedding matrix (one per context word). `unsqueeze(0)` makes it shape `(1, hidden_size)`, and `repeat(context_length, 1)` tiles it so every context word gets the same update.
 
@@ -581,10 +598,18 @@ Over the course of implementing this, we hit several issues worth highlighting.
 
 The initial version of the code summed context word embeddings without averaging. The problem: longer context windows (say 8 words) would produce larger gradient magnitudes than shorter ones (say 2 words). The model would oscillate, paying more attention to words in longer windows simply because they had more signal.
 
-**Fix:** Divide the summed context embedding by the context length.
+**Fix (forward):** Divide the summed context embedding by the context length.
 
 ```mojo
 var averaged_context = context_embedding / Float32(context_length)
+```
+
+But there's a second half to this fix. The backward pass applies the chain rule through the averaging: if `forward = sum(embeddings) / C`, then `dL/d(embedding_i) = gradient_context / C`. If you only fix the forward pass but still compute `context_update = -gradient * lr` in the backward, the gradient is wrong by a factor of C. The update ends up C times too large for long windows and C times too small for short ones (because the gradient itself was scaled by the averaging, and you need to scale the update to match).
+
+**Fix (backward):** Divide the context update by the context length.
+
+```mojo
+var context_update = -gradient_context * Float32(LEARNING_RATE) / Float32(context_length)
 ```
 
 ## Pitfall 2: Sigmoid Saturation at Initialization
@@ -643,7 +668,7 @@ This implementation highlights a few of Tenmo's design strengths:
 We built the full pipeline from raw text to word vectors using Tenmo:
 
 1. **A text tokenizer** that cleans HTML-laden reviews, builds a vocabulary, and encodes text into integer IDs with an unknown-word fallback.
-2. **A skip-gram training loop** that predicts context words from target words, with context window construction and embedding averaging.
+2. **A CBOW training loop** that predicts the target word from averaged context embeddings, with context window construction and embedding averaging.
 3. **Negative sampling** that turns a V-way softmax into K+1 binary classifications — the key algorithmic insight that makes word2vec practical.
 4. **Manual gradient computation** with Tenmo's `scatter_add` for sparse updates — optimizing only the embedding rows that actually participated in each training step.
 5. **A similarity probe** that validates the learned embeddings by finding nearest neighbors in vector space.
@@ -651,10 +676,10 @@ We built the full pipeline from raw text to word vectors using Tenmo:
 The final implementation trains on 5,000 IMDB reviews, producing word vectors where "terrible" is close to "awful", "horrible", and "dreadful" — without ever being told that these words are related. The model learned it purely from the statistics of word co-occurrence in raw text.
 
 **Next steps to explore:**
-- Try the autograd variant in `negative_sampling_emb.mojo` — it uses Tenmo's `Embedding` module with `BCEWithLogitsLoss` and `SGD`. It's slower (dense optimizer on sparse problem) but demonstrates how the same algorithm composes with Tenmo's autograd framework.
+- Try the autograd variant in [`working/negative_sampling_emb.mojo`](https://github.com/ratulb/tenmo/blob/dev/working/negative_sampling_emb.mojo) in the tenmo repo — it uses Tenmo's `Embedding` module with `BCEWithLogitsLoss` and `SGD`. It's slower (dense optimizer on sparse problem) but demonstrates how the same algorithm composes with Tenmo's autograd framework.
 - Swap negative sampling for hierarchical softmax and compare training speed and embedding quality.
 - Move to a larger corpus (Wikipedia dumps are a common next step) and use subword tokenization (BPE) instead of word-level tokens.
 - Probe the embedding space for analogies: "king − man + woman = ?" — if the vectors capture relational semantics, the nearest neighbor to the result should be "queen."
 
-The full code (around 750 lines) is available in this blog's repository. It's MIT-licensed and ready to run — just `mojo negative_sampling.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
+The full code (around 750 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
 
