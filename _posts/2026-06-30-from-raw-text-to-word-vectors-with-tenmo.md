@@ -618,5 +618,5 @@ The final implementation trains on 5,000 IMDB reviews, producing word vectors wh
 - Swap negative sampling for hierarchical softmax and compare training speed and embedding quality.
 - Move to a larger corpus (Wikipedia dumps are a common next step) and use subword tokenization (BPE) instead of word-level tokens.
 
-The full code (around 750 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
+The full code (around 750 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo -I . examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
 
