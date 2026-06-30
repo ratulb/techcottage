@@ -3,6 +3,7 @@ layout: post
 title: "Deploy play 2.0 app on cloudfoundry"
 date: 2012-05-12 11:47:00.001+00:00
 tags: []
+excerpt: "How to deploy a Play 2.0 application on CloudFoundry using the vmc command-line tool."
 ---
 
 For last few days I was trying to find a to deploy my play 2.0 application. I have already deployed my app at heroku\(http://ooki.herokuapp.com/\). But heroku offers very limited resources for free account \(max slug size can not exceed 100MB and only 5MB of shared database space. So you have to work within these constraints and it becomes difficult to play around. In fact, to reduce my slug size I had to use a custom build pack from github. Also, if your application is not accessed for a long - heroku idles out your app - next time you access your app - it takes a long time for the response to come back. So you need to setup some kind ping program to keep hitting your app at regular interval say, every 10 minutes.  

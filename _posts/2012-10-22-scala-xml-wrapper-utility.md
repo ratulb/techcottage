@@ -3,6 +3,7 @@ layout: post
 title: "scala xml wrapper utility"
 date: 2012-10-22 13:51:00.002+00:00
 tags: []
+excerpt: "XDoc is a utility wrapper over scala.xml.Elem that simplifies XML processing."
 ---
 
 XDoc is a utility wrapper over scala.xml.Elem. It's simplifies xml processing. Following needs to be considered while using this utility:  
