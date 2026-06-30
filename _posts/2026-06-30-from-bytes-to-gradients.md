@@ -438,11 +438,4 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 **Gradbox lifespan confusion.** Gradboxes have their own refcount. If you save `tensor.grad()` to a variable, it returns a deep copy via `Gradbox.detach()` — a fresh allocation with independent data. The internal gradbox remains untouched by subsequent `zero_grad()` calls. The detached copy is safe to use, but it's not linked to the parameter anymore.
 
 **`stop_grad=True` breaks graph flow.** If you transfer weights to GPU with `stop_grad=True`, the model's parameters become GPU leaves. Input tensors transferred with `stop_grad=False` (default) can still carry gradients from the loss back to their CPU origin, but the weights' gradients accumulate on the GPU parameters. This is usually what you want, but it means `model.to_cpu(stop_grad=True)` creates new CPU leaves — the GPU weight values are copied, but the CPU copy won't receive future gradients.
-
-**Broadcast backward shape mismatch.** When broadcasting in multiplication backward, the gradient must be *unbroadcast* — summed over the broadcast axes — before being passed to the parent. `Gradbox.sum_over_broadcasted_axes()` does this via `SumMeanReduction`. If the backward formula blindly reshapes instead of summing, the gradient values are wrong. This was a real bug fixed during development.
-
-**Sparse SGD is incompatible with autograd for embedding layers.** `SGD.step()` with `indices` only updates specified rows. But the autograd graph still computes dense gradients — all 252K rows if you use `Embedding` with `.backward()`. For word2vec-style training where only ~10 rows change per step, the manual `scatter_add` pattern is 16× faster because it skips the dense gradient computation entirely.
-
 ---
-
-**Suggested hero image:** A layered cross-section diagram of a silicon wafer, zooming from a flat memory grid at the bottom through progressively higher abstractions (strided blocks, tensor arrows, gradient flow lines) to a 3D network at the top, with the Mojo flame logo embedded in the substrate layer. Monochrome blue-orange palette.
