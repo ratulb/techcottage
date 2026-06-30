@@ -327,10 +327,6 @@ The objective function for a single training example:
 ```
 J = log σ(u · v) + Σ_{k=1}^{K} E_{w_k ~ P_n}[log σ(-u_k · v)]
 ```
-```
-$$ J = \log \sigma(u \cdot v) + \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n}[\log \sigma(-u_k \cdot v)] $$
-```
-
 
 Where:
 - `u` is the embedding of the candidate word (target or negative sample) — looked up from `output_embeddings`
