@@ -660,6 +660,3 @@ The final implementation trains on 5,000 IMDB reviews, producing word vectors wh
 
 The full code (around 750 lines) is available in this blog's repository. It's MIT-licensed and ready to run — just `mojo negative_sampling.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
 
----
-
-**Suggested hero image:** A visual of raw text flowing through a pipeline — HTML tags being stripped, words being mapped to integer IDs, then through a "neural network" block, and finally emerging as a 2D-projected vector space where semantically similar words cluster together — shown as connected dots labeled with words like "terrible", "awful", "horrible" in one cluster and "beautiful", "wonderful", "amazing" in another.
