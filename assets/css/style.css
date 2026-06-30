@@ -90,7 +90,7 @@ html, body {
 
 .home a,
 .home a:visited {
-  color: #93c5fd !important;
+  color: #fbbf24 !important;
 }
 
 .post-link {
@@ -105,11 +105,6 @@ html, body {
   text-decoration: underline;
   font-size: 1.5rem;
   margin-left: 0.25em;
-}
-
-.home .post-tenmo-link,
-.home .post-tenmo-link:visited {
-  color: #fbbf24 !important;
 }
 
 .post-tenmo-link:hover {
@@ -144,7 +139,7 @@ pre code {
 
 /* Links in content area */
 .post-content a {
-  color: #93c5fd;
+  color: #fbbf24;
   text-decoration: underline;
 }
 
