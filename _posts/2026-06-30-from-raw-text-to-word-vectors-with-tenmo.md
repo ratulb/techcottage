@@ -17,7 +17,7 @@ This single equation — the notion that arithmetic on word vectors reveals sema
 
 How does that work? And more importantly, how do we build it from scratch?
 
-In this post, we'll implement the full pipeline using **Tenmo** — a tensor library and neural network framework built in Mojo with full autograd, SIMD-optimized kernels, and GPU support. We'll build a tokenizer that converts raw movie reviews into integer IDs, a CBOW training loop with negative sampling, and a similarity probe that lets us query the learned embedding space. The entire implementation lives in a single file — around 750 lines — and trains on the IMDB review dataset.
+In this post, we'll implement the full pipeline using **Tenmo** — a tensor library and neural network framework built in Mojo with full autograd, SIMD-optimized kernels, and GPU support. We'll build a tokenizer that converts raw movie reviews into integer IDs, a CBOW training loop with negative sampling, and a similarity probe that lets us query the learned embedding space. The entire implementation lives in a single file — around 750 lines with the model encapsulated in a compact `Word2Vec` struct — and trains on the IMDB review dataset.
 
 ## The Problem: Computers Don't Read
 
@@ -379,136 +379,160 @@ This is the heart of negative sampling — a few lines of code that turn an intr
 
 ## Stage 5: The Training Loop
 
-With the theory in place, the training loop ties everything together. For each word in each review:
+With the theory in place, the training loop ties everything together. The model is encapsulated in a `Word2Vec` struct that holds both embedding tables and exposes `forward()` and `step()` methods. The inner loop simplifies to four lines:
 
-1. Build a context window around the target word.
-2. Average the context word embeddings to get a single context vector.
-3. Get embeddings for the positive + negative samples.
-4. Compute scores via dot product + sigmoid.
-5. Compute gradients manually — we're intentionally doing this by hand. Tenmo has full autograd support (`track_grad=True`, `.backward()`, etc.), but the gradient of binary cross-entropy simplifies to a single subtraction. Dispatching through the autograd graph would be pure overhead.
-6. Update input and output embeddings via Tenmo's `scatter_add`, which applies gradients to only the rows that participated in the forward pass.
+```mojo
+var scores = model.forward(ctx, tgt)
+model.step(scores, fixed_target, ctx, tgt, Float32(LEARNING_RATE))
+```
 
-Let's walk through each step with the real code.
+For each word in each review, the loop:
+
+1. Builds a context window around the target word.
+2. Calls `model.forward(ctx, tgt)` which averages context embeddings, scores targets, and applies sigmoid — caching intermediates for the next step.
+3. Calls `model.step(scores, labels, ctx, tgt, lr)` which does backward (gradient = scores − labels, chain rule through matmul) and scatter-adds sparse updates to both embedding tables.
+4. Uses Tenmo's `scatter_add` under the hood, updating only the rows that participated in the forward pass.
+
+The full inner loop:
+
+```mojo
+for word_position in range(len(review)):
+    var left = slice(max(0, word_position - CONTEXT_WINDOW_SIZE), word_position)
+    var right = slice(word_position + 1,
+        min(len(review), word_position + CONTEXT_WINDOW_SIZE))
+    if left.start == left.end and right.start == right.end:
+        continue
+
+    var ctx = review[left].copy()
+    ctx.extend(review[right].copy())
+    if len(ctx) == 0:
+        continue
+
+    var tgt = generate_negative_samples(review, word_position,
+        all_tokens, NUM_NEGATIVE_SAMPLES)
+
+    var scores = model.forward(ctx, tgt)
+    model.step(scores, fixed_target, ctx, tgt, Float32(LEARNING_RATE))
+```
+
+Let's look at what happens inside those two method calls.
 
 ## Forward Pass
 
+The forward pass is encapsulated in `Word2Vec.forward()`:
+
 ```mojo
-# Average context word embeddings
-var context_embedding = input_embeddings.gather[track_grad=False](
-    context_indices, reduction=Reduction(1)
-)
-var averaged_context = context_embedding / Float32(context_length)
-
-# Get embeddings for target + negative samples
-var sample_embeddings = output_embeddings.gather[track_grad=False](
-    sample_indices
-)
-
-# Calculate scores using dot product + sigmoid
-var predicted_scores = sample_embeddings.matmul[
-    mode=mv, track_grad=False
-](averaged_context).sigmoid()
+def forward(
+    mut self,
+    context_indices: List[Int],
+    target_indices: List[Int],
+) -> Tensor[Self.dt]:
+    self.cached_avg = self.input_embeddings.gather[track_grad=False](
+        context_indices, reduction=Reduction(0)
+    )
+    self.cached_tgt_emb = self.output_embeddings.gather[track_grad=False](
+        target_indices
+    )
+    var scores = self.cached_tgt_emb.matmul[mode=mv, track_grad=False](
+        self.cached_avg
+    )
+    return scores.sigmoid[track_grad=False]()
 ```
 
-Three operations, each doing real work:
+The same three operations, now in one place:
 
-**Gather with reduction.** `input_embeddings.gather(context_indices, reduction=Reduction(1))` looks up the embedding for each context word ID, then averages them (reduction=1 means "mean"). This turns, say, 6 context words into a single 100-dimensional vector. Using gather with built-in reduction is faster than summing vectors manually — it avoids creating intermediate tensors.
+**Gather with reduction.** `gather(context_indices, reduction=Reduction(0))` looks up the embedding for each context word ID and averages them (`Reduction(0)` means "mean"). This turns, say, 6 context words into a single 100-dimensional vector. The result is cached as `cached_avg` for the subsequent `step()` call.
 
-**Matmul with mode=mv.** `sample_embeddings` is shape `(K+1, hidden_size)`; `averaged_context` is shape `(hidden_size,)`. The `mode=mv` flag tells the matmul to interpret this as a matrix-vector multiplication, producing shape `(K+1,)`. Each entry is the dot product between one sample's embedding and the averaged context.
+**Matmul with mode=mv.** `cached_tgt_emb` is shape `(K+1, hidden_size)`; `cached_avg` is shape `(hidden_size,)`. `mode=mv` tells matmul to treat this as matrix-vector multiplication, producing shape `(K+1,)`. Each entry is the dot product between one sample's embedding and the averaged context.
 
-**Sigmoid.** The dot products are raw scores in (-∞, ∞). Sigmoid squashes them to (0, 1) so they can be interpreted as probabilities — how likely it is that this word appeared in this context.
+**Sigmoid.** The dot products are raw scores in (-∞, ∞). Sigmoid squashes them to (0, 1) so they can be interpreted as probabilities.
+
+The method also caches `cached_tgt_emb` for the backward pass to use. These cached intermediates let ``step()`` avoid re-running the gather operations when computing gradients.
 
 ## Training Target
 
 ```mojo
-var training_target = Tensor[dtype].zeros(NEGATIVE_SAMPLES + 1)
-training_target[0] = 1
+var fixed_target = Tensor[dtype].zeros(NUM_NEGATIVE_SAMPLES + 1)
+fixed_target[0] = 1
 ```
 
 The target vector is `[1, 0, 0, 0, 0, 0]` (when K=5). The `1` at position 0 tells the model "the word at index 0 (the positive sample) should have high probability." The `0`s at positions 1–5 say "these random words should have low probability."
 
-This is a binary cross-entropy setup: each of the K+1 positions is an independent binary classification.
+This is a binary cross-entropy setup: each of the K+1 positions is an independent binary classification. The target is created once and reused across every training step.
 
-## Backward Pass (Manual Gradients)
+## Backward + Update: The step() Method
+
+The backward pass and parameter update are combined in `Word2Vec.step()`. The gradient of binary cross-entropy with respect to the logits simplifies to a single subtraction — `scores - labels` — so the autograd graph would be pure overhead here. Instead, we compute gradients by hand and apply them directly with `scatter_add`:
 
 ```mojo
-var gradient_output = predicted_scores - training_target
+def step(
+    mut self,
+    scores: Tensor[Self.dt],
+    labels: Tensor[Self.dt],
+    context_indices: List[Int],
+    target_indices: List[Int],
+    lr: Scalar[Self.dt],
+):
+    var context_length = len(context_indices)
+    var gradient = scores - labels
+    var grad_ctx = self.cached_tgt_emb.transpose[track_grad=False]().matmul[
+        mode=mv, track_grad=False
+    ](gradient)
+
+    # Input embeddings — rank-1 source broadcasts to all context rows
+    var ctx_update = -grad_ctx * lr / Scalar[Self.dt](context_length)
+    Filler[Self.dt].scatter_add(
+        self.input_embeddings.buffer,
+        ctx_update.buffer,
+        IntArray(context_indices),
+    )
+
+    # Output embeddings — outer product, each target row gets its own
+    var out_update = -gradient.unsqueeze(1) * self.cached_avg.unsqueeze(0) * lr
+    Filler[Self.dt].scatter_add(
+        self.output_embeddings.buffer,
+        out_update.buffer,
+        IntArray(target_indices),
+    )
 ```
 
-This one line is the gradient of binary cross-entropy with respect to the logits (pre-sigmoid scores). For binary cross-entropy `L = -[t log(p) + (1-t) log(1-p)]` with `p = σ(x)`, the gradient simplifies to `dL/dx = p - t`. No exponentials, no logarithms — just a subtraction.
+Three distinct computations happen here:
+
+### 1. The gradient formula
+
+`scores - labels` is the gradient of binary cross-entropy with respect to pre-sigmoid logits. For `L = -[t log(p) + (1-t) log(1-p)]` with `p = σ(x)`, the gradient simplifies to `dL/dx = p - t`. No exponentials, no logarithms — just a subtraction.
 
 We're computing this by hand intentionally. Tenmo has a complete autograd engine — you can set `track_grad=True` on any tensor, call `.backward()` on the loss, and the framework will unroll the full computation graph, compute all gradients, and feed them to an optimizer. But here, the gradient formula collapses to a single element-wise subtraction. Dispatching that through graph construction, tape recording, and jump-table dispatch would add 10-100x overhead for no benefit. The manual path isn't a workaround — it's the right tool for this job.
 
-```mojo
-# Gradient for context embedding
-var gradient_context = sample_embeddings.transpose().matmul[
-    mode=mv, track_grad=False
-](gradient_output)
-```
+### 2. Chain rule through matmul
 
-This is the chain rule through the dot product. If `score = u · v` and `dL/dscore = gradient_output`, then `dL/dv = u^T · gradient_output`. We transpose the sample embeddings (shape `(hidden_size, K+1)`) and multiply by the output gradient (shape `(K+1,)`), giving `dL/daveraged_context` as a shape `(hidden_size,)` vector.
+`grad_ctx = cached_tgt_emb^T @ gradient` is the chain rule through the dot product. If `score = u · v` and `dL/dscore = gradient`, then `dL/dv = u^T · gradient`. We transpose the cached target embeddings (shape `(hidden_size, K+1)`) and multiply by the gradient (shape `(K+1,)`), getting the gradient for the averaged context vector (shape `(hidden_size,)`).
 
-## Sparse Updates with Tenmo's scatter_add
+### 3. Sparse updates with scatter_add
 
-The most performance-critical part of the loop: updating only the rows of the embedding matrices that were actually used in this step. Tenmo provides `Filler.scatter_add` — a sparse update primitive that adds gradient contributions to specific rows of a tensor buffer, leaving all other rows untouched.
+Both embedding updates use `Filler.scatter_add` — Tenmo's sparse update primitive that adds gradient contributions to specific rows of a tensor buffer, leaving all other rows untouched. This avoids materializing a full `(vocab_size, hidden_size)` gradient matrix — a savings of ~100× memory and computation.
 
-```mojo
-# Update Input Embeddings
-var context_update = -gradient_context * Float32(LEARNING_RATE) / Float32(context_length)
-var context_update_broadcast = context_update.unsqueeze(0)
-var context_update_matrix = context_update_broadcast.repeat[
-    track_grad=False
-](context_length, 1)
+The input embedding update uses **rank-1 broadcast**: `scatter_add` detects that `ctx_update` has rank 1 and broadcasts it uniformly across all indices. Every context word gets the same gradient vector added to its row, without needing `unsqueeze` + `repeat` to tile it into a matrix first.
 
-var context_indices_array = IntArray(context_indices)
-Filler[dtype].scatter_add(
-    input_embeddings.buffer,
-    context_update_matrix.buffer,
-    context_indices_array
-)
-
-# Update Output Embeddings
-var output_update = (
-    -gradient_output.unsqueeze(1)
-    * averaged_context.unsqueeze(0)
-    * Float32(LEARNING_RATE)
-)
-
-var sample_indices_array = IntArray(sample_indices)
-Filler[dtype].scatter_add(
-    output_embeddings.buffer,
-    output_update.buffer,
-    sample_indices_array
-)
-```
-
-Here's what's happening:
-
-1. **Compute the update.** `context_update = -gradient * lr / context_length` gives us the negative gradient direction scaled by the learning rate and **divided by the context length**. The division by context_length is critical: in the forward pass, we divided the summed context embeddings by context_length (averaging), so the chain rule requires us to divide the gradient by context_length as well. Without this, longer context windows would get disproportionately large updates, and the model would oscillate.
-
-2. **Broadcast to a matrix.** The context gradient is a single vector, but we need to add it to multiple rows of the embedding matrix (one per context word). `unsqueeze(0)` makes it shape `(1, hidden_size)`, and `repeat(context_length, 1)` tiles it so every context word gets the same update.
-
-3. **Tenmo's scatter_add.** This is the core sparse operation: "add these row vectors to the embedding matrix at these specific row indices." It avoids materializing a full gradient matrix of size `vocab_size × hidden_size` — a savings of ~100x memory and computation. This isn't something we built from scratch — Tenmo's `Filler` module provides this primitive out of the box, with both CPU and GPU kernel implementations.
-
-The output update uses a different formula. Since the gradient flows through each sample independently, each of the K+1 samples gets its own update proportional to how wrong its prediction was:
+The output update is different. Each of the K+1 samples gets its own update proportional to how wrong its prediction was:
 
 ```
-output_update[sample_i] = -gradient_output[i] * averaged_context * lr
+out_update[sample_i] = -gradient[i] * cached_avg * lr
 ```
 
-The `unsqueeze` operations handle broadcasting: `gradient_output` is shape `(K+1,)`, `averaged_context` is shape `(hidden_size,)`. After unsqueezing, `gradient_output.unsqueeze(1)` is `(K+1, 1)` and `averaged_context.unsqueeze(0)` is `(1, hidden_size)`. The element-wise multiplication broadcasts to `(K+1, hidden_size)` — exactly the shape needed to update all K+1 sample embeddings in one scatter_add call.
+The `unsqueeze` operations handle broadcasting: `gradient` is shape `(K+1,)`, `cached_avg` is shape `(hidden_size,)`. After unsqueezing, `gradient.unsqueeze(1)` is `(K+1, 1)` and `cached_avg.unsqueeze(0)` is `(1, hidden_size)`. The element-wise multiplication broadcasts to `(K+1, hidden_size)` — exactly the shape needed to update all K+1 sample embeddings in one scatter_add call.
+
+The division by `context_length` in the input update is critical: in the forward pass, we averaged the context embeddings, so the chain rule requires dividing the gradient by `context_length`. Without this, longer context windows would get disproportionately large updates.
 
 ## Gradient Flow Verification
 
-After each epoch, we check that gradients are actually flowing:
+After each epoch, we check that gradients are actually flowing by comparing the weight sum against the initial value captured before training began:
 
 ```mojo
-var final_weight_sum = input_embeddings.sum[track_grad=False]().item()
-var weight_change = final_weight_sum - initial_weight_sum
+var final_sum = model.input_embeddings.sum[track_grad=False]().item()
 print(
-    "\nWeight sum change:",
-    weight_change,
-    "(should be != 0 — proves gradients are flowing!)"
+    "\n  ✓ Weight sum change:", final_sum - initial_weight_sum,
+    "(should be != 0 — proves gradients are flowing!)",
 )
 ```
 
@@ -609,7 +633,7 @@ We built the full pipeline from raw text to word vectors using Tenmo:
 1. **A text tokenizer** that cleans HTML-laden reviews, builds a vocabulary, and encodes text into integer IDs with an unknown-word fallback.
 2. **A CBOW training loop** that predicts the target word from averaged context embeddings, with context window construction and embedding averaging.
 3. **Negative sampling** that turns a V-way softmax into K+1 binary classifications — the key algorithmic insight that makes word2vec practical.
-4. **Manual gradient computation** with Tenmo's `scatter_add` for sparse updates — optimizing only the embedding rows that actually participated in each training step.
+4. **A `Word2Vec` struct** whose `forward()` and `step()` methods encapsulate manual gradient computation and sparse `scatter_add` updates — optimizing only the embedding rows that actually participated in each training step.
 5. **A similarity probe** that validates the learned embeddings by finding nearest neighbors in vector space.
 
 The final implementation trains on 5,000 IMDB reviews, producing word vectors where "terrible" is close to "awful", "horrible", and "dreadful" — without ever being told that these words are related. The model learned it purely from the statistics of word co-occurrence in raw text.
@@ -618,5 +642,5 @@ The final implementation trains on 5,000 IMDB reviews, producing word vectors wh
 - Swap negative sampling for hierarchical softmax and compare training speed and embedding quality.
 - Move to a larger corpus (Wikipedia dumps are a common next step) and use subword tokenization (BPE) instead of word-level tokens.
 
-The full code (around 750 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo -I . examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
+The full code (around 760 lines) is available in the [tenmo repo's `examples/word2vec_cbow.mojo`](https://github.com/ratulb/tenmo/blob/dev/examples/word2vec_cbow.mojo). It's MIT-licensed and ready to run — just `mojo -I . examples/word2vec_cbow.mojo` with the IMDB dataset in `/tmp/aclImdb/`.
 
