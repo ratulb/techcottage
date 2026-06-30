@@ -10,8 +10,6 @@ excerpt: >
   vectors for semantic similarity.
 ---
 
-# From Raw Text to Word Vectors: Building a Tokenizer and Word Embeddings with Tenmo
-
 "king − man + woman ≈ queen."
 
 This single equation — the notion that arithmetic on word vectors reveals semantic relationships — is what made word embeddings famous. It suggests that somewhere inside a high-dimensional vector space, directions like "royalty" and "gender" actually exist as learned features. A computer trained only on raw text, with no dictionary or grammar, can learn that *king* and *queen* differ by the same vector as *man* and *woman*.
@@ -28,7 +26,7 @@ To make words computable, we need **vector representations** — each word mappe
 
 But what kind of vector?
 
-### One-Hot Encoding
+## One-Hot Encoding
 
 The simplest approach: assign each word a unique V-dimensional vector with a single `1` and `V−1` zeros.
 
@@ -45,15 +43,15 @@ The problems are immediate:
 - **High-dimensional, sparse.** A 100K-dimensional vector with a single non-zero element wastes memory and fails in any ML model that expects dense features.
 - **No generalization.** The model can't leverage the fact that *king* and *queen* behave similarly in text — they're treated as completely independent symbols.
 
-### Bag-of-Words and TF-IDF
+## Bag-of-Words and TF-IDF
 
 The next refinement: count how often each word appears in a document. A vector of term frequencies is denser than one-hot, but it's still V-dimensional and ignores word order. TF-IDF improves on raw counts by down-weighting common words (*the*, *a*, *in*), but the representation remains sparse, high-dimensional, and incapable of capturing synonymy.
 
-### Co-Occurrence Matrices (GloVe)
+## Co-Occurrence Matrices (GloVe)
 
 GloVe builds a word-word co-occurrence matrix: count how often word *i* appears near word *j* across the entire corpus, then factorize that matrix to produce dense vectors. The intuition is simple — words that occur in similar contexts have similar vectors — but the co-occurrence matrix is O(V²), making it impractical for large vocabularies without heavy approximation.
 
-### Prediction-Based Embeddings (word2vec)
+## Prediction-Based Embeddings (word2vec)
 
 word2vec flips the problem around. Instead of counting co-occurrences, we train a neural network to **predict** whether a word appears in a given context. The vectors emerge as a byproduct — the hidden layer weights of this prediction network become the word embeddings.
 
@@ -67,7 +65,7 @@ A tokenizer converts text into integer IDs. It's the gateway between raw strings
 2. Build a vocabulary — collect every unique word from the training corpus, sort it, and assign each word a unique integer.
 3. Encode new text into those IDs, with a fallback for words not seen during training.
 
-### Cleaning Text
+## Cleaning Text
 
 The IMDB dataset contains movie reviews with HTML tags (`<br />`, `<a href="...">`), URLs, ratings, and other noise. We clean it in a single pass using Python's `re` module — Mojo's Python interop handles this cleanly:
 
@@ -105,7 +103,7 @@ Every step handles a real data problem:
 
 The use of `Python.evaluate` to define a lambda is worth noting. Mojo's Python interop means we can write Python logic inline without leaving the language — perfect for text processing where Mojo's standard library doesn't yet have a regex engine.
 
-### Building the Vocabulary
+## Building the Vocabulary
 
 Once we've cleaned every review, we collect the unique words across the entire dataset:
 
@@ -142,7 +140,7 @@ Key design decisions:
 - **Alphabetical sort.** Sorting the vocabulary before assigning IDs ensures deterministic behavior across runs. The word with ID 1 is always `"aaron"`, not a random word depending on Python's set iteration order.
 - **Dict[String, Int] for lookup, Dict[Int, String] for decoding.** The tokenizer stores both mappings so we can go from text → IDs and back.
 
-### Encoding and Decoding
+## Encoding and Decoding
 
 With the vocabulary built, encoding new text is straightforward:
 
@@ -164,7 +162,7 @@ def decode(self, token_ids: List[Int]) raises -> String:
 
 The encode step is the inverse of cleaning: the same `clean_text` function that prepared training data also processes new input. Consistency between training and inference is critical — if your tokenizer cleans text one way during training but differently during inference, your model will see a distribution mismatch.
 
-### Loading the IMDB Dataset
+## Loading the IMDB Dataset
 
 The dataset lives at `/tmp/aclImdb/train/` with `pos/` and `neg/` subdirectories. Each file is named like `1234_8.txt` — the number after the underscore is the rating from 1 to 10. We filter for strong reviews (rating ≥ 7 positive, ≤ 4 negative) to get cleaner signal:
 
@@ -285,7 +283,7 @@ Here, `score(w_c, w_t)` is the dot product between the **output embedding** of t
 
 The asymmetry is intentional. A word acting as a target should be close in vector space to words that appear near it as contexts. Having two sets of weights makes the optimization easier — the model has separate parameters for each role.
 
-### The Softmax Wall
+## The Softmax Wall
 
 The softmax denominator sums over every word in the vocabulary. For each training step, computing this requires:
 
@@ -320,11 +318,11 @@ Where:
 
 The first term pushes the target and context vectors together. Each term in the second sum pushes the target and a random noise word apart.
 
-### K+1 Binary Classifications Instead of One V-Way Classification
+## K+1 Binary Classifications Instead of One V-Way Classification
 
 This is the entire point: instead of one V-way softmax (V computations per step), we now have K+1 binary classifications (K+1 computations per step). With K = 5–20, that's a **5,000x–20,000x reduction** in computation per training step.
 
-### The Noise Distribution
+## The Noise Distribution
 
 Mikolov found empirically that the best noise distribution is the unigram distribution raised to the 3/4 power:
 
@@ -374,7 +372,7 @@ With the theory in place, the training loop ties everything together. For each w
 
 Let's walk through each step with the real code.
 
-### Forward Pass
+## Forward Pass
 
 ```mojo
 # Average context word embeddings
@@ -402,7 +400,7 @@ Three operations, each doing real work:
 
 **Sigmoid.** The dot products are raw scores in (-∞, ∞). Sigmoid squashes them to (0, 1) so they can be interpreted as probabilities — how likely it is that this word appeared in this context.
 
-### Training Target
+## Training Target
 
 ```mojo
 var training_target = Tensor[dtype].zeros(NEGATIVE_SAMPLES + 1)
@@ -413,7 +411,7 @@ The target vector is `[1, 0, 0, 0, 0, 0]` (when K=5). The `1` at position 0 tell
 
 This is a binary cross-entropy setup: each of the K+1 positions is an independent binary classification.
 
-### Backward Pass (Manual Gradients)
+## Backward Pass (Manual Gradients)
 
 ```mojo
 var gradient_output = predicted_scores - training_target
@@ -432,7 +430,7 @@ var gradient_context = sample_embeddings.transpose().matmul[
 
 This is the chain rule through the dot product. If `score = u · v` and `dL/dscore = gradient_output`, then `dL/dv = u^T · gradient_output`. We transpose the sample embeddings (shape `(hidden_size, K+1)`) and multiply by the output gradient (shape `(K+1,)`), giving `dL/daveraged_context` as a shape `(hidden_size,)` vector.
 
-### Sparse Updates with Tenmo's scatter_add
+## Sparse Updates with Tenmo's scatter_add
 
 The most performance-critical part of the loop: updating only the rows of the embedding matrices that were actually used in this step. Tenmo provides `Filler.scatter_add` — a sparse update primitive that adds gradient contributions to specific rows of a tensor buffer, leaving all other rows untouched.
 
@@ -482,7 +480,7 @@ output_update[sample_i] = -gradient_output[i] * averaged_context * lr
 
 The `unsqueeze` operations handle broadcasting: `gradient_output` is shape `(K+1,)`, `averaged_context` is shape `(hidden_size,)`. After unsqueezing, `gradient_output.unsqueeze(1)` is `(K+1, 1)` and `averaged_context.unsqueeze(0)` is `(1, hidden_size)`. The element-wise multiplication broadcasts to `(K+1, hidden_size)` — exactly the shape needed to update all K+1 sample embeddings in one scatter_add call.
 
-### Gradient Flow Verification
+## Gradient Flow Verification
 
 After each epoch, we check that gradients are actually flowing:
 
@@ -579,7 +577,7 @@ Every one of these is a negative-sentiment word — exactly what "terrible" shou
 
 Over the course of implementing this, we hit several issues worth highlighting.
 
-### Pitfall 1: Gradient Explosion from Unnormalized Context
+## Pitfall 1: Gradient Explosion from Unnormalized Context
 
 The initial version of the code summed context word embeddings without averaging. The problem: longer context windows (say 8 words) would produce larger gradient magnitudes than shorter ones (say 2 words). The model would oscillate, paying more attention to words in longer windows simply because they had more signal.
 
@@ -589,19 +587,19 @@ The initial version of the code summed context word embeddings without averaging
 var averaged_context = context_embedding / Float32(context_length)
 ```
 
-### Pitfall 2: Sigmoid Saturation at Initialization
+## Pitfall 2: Sigmoid Saturation at Initialization
 
 If the initial dot products are too large (say, > 5 in magnitude), sigmoid saturates — it produces values very close to 0 or 1, where the gradient is nearly zero. The model stops learning because the gradient vanishes.
 
 **Fix:** Initialize input embeddings to uniform random in [-0.1, 0.1] and output embeddings to zeros. Small initial magnitudes keep dot products in the linear region of sigmoid (around 0, where the gradient is ≈ 0.25). This is also why the autograd variant initializes output embeddings with an even smaller range [-0.01, 0.01].
 
-### Pitfall 3: scatter_add vs. Direct Assignment
+## Pitfall 3: scatter_add vs. Direct Assignment
 
 The gradient update must **add** to existing embeddings, not replace them. If you write `embeddings[rows] = embeddings[rows] + update`, you create a temporary tensor, modify it, and write it back. `scatter_add` does the same operation in-place without extra memory allocations.
 
 This matters at scale. When training on 5 million tokens with 5 context words each, you're making 25 million sparse updates per epoch. Even a small per-update allocation balloon — a Mojo temporary NDBuffer created and immediately freed — adds up to hundreds of millions of short-lived allocations.
 
-### Pitfall 4: Token ID Validation
+## Pitfall 4: Token ID Validation
 
 If a token ID exceeds the vocabulary size, the embedding gather returns garbage (or crashes). This seems obvious, but it's easy to get wrong when you have preprocessing logic (cleaning, filtering, encoding) that might produce IDs from the *training* vocabulary that don't match the *full* vocabulary.
 
@@ -618,7 +616,7 @@ if max_id >= len(tokenizer):
 
 This check runs during data loading and catches mismatches immediately.
 
-### Pitfall 5: The Autograd Overhead Trap
+## Pitfall 5: The Autograd Overhead Trap
 
 The initial version of this code used Tenmo's autograd framework (the `track_grad=True` path with `.backward()` and `SGD.step()`). This was **16× slower** than the manual approach, even though both compute the same gradients. Why?
 
