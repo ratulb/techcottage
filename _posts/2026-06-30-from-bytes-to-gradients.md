@@ -462,4 +462,4 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 
 ---
 
-[^1]: "Saturates the machine" means the CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
+[^1]: "CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
