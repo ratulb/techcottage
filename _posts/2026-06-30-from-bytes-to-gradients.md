@@ -1,5 +1,5 @@
 ---
-title: "From Bytes to Gradients: Tracing a Neural Network Through Tenmo, One Layer at a Time"
+title: "From Bytes to Gradients: Tracing a Neural Network Through [Tenmo](2026-06-30-from-raw-text-to-word-vectors-with-tenmo.md), One Layer at a Time"
 date: "2026-06-30"
 categories: ["Machine Learning", "Mojo"]
 tags: ["autograd", "mojo", "tensor-library", "systems-programming", "deep-learning"]
@@ -98,7 +98,7 @@ struct Tensor[dtype: DType]:
 
 Two of these fields deserve a closer look.
 
-**Gradbox** — this is not Tensor, and that matters. Tensor is 4543 lines of code; Gradbox is 1526. Gradbox doesn't need matmul, broadcasting, reductions, trig, indexing, slicing, comparisons, I/O, or any of the 200-odd operations Tensor supports. It only needs gradient storage shapes, accumulation (add, subtract, zero), reshape, broadcast, and device transfer. That's it. A lean container specialized for one job.
+**Gradbox** — this is not Tensor, and that matters. Tensor is 4543 lines of code; Gradbox is 1526. Gradbox doesn't need  reductions, trig, comparisons, or many of the 200-odd operations Tensor supports. It only needs gradient storage shapes, accumulation (add, subtract, zero), reshape, broadcast, and device transfer. That's it. A lean container specialized for one job.
 
 Technically, Gradbox is a combined heap allocation of `[Atomic(UInt64)] | [NDBuffer]`. The atomic refcount is *independent* of the Tensor's refcount. When Mojo's ASAP destruction drops an intermediate tensor, the Gradbox survives if other handles (Ancestor copies in the graph) still reference it. This prevents dangling pointers in the autograd graph.
 
