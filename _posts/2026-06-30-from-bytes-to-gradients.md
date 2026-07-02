@@ -470,9 +470,11 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 
 The complete source is on GitHub at [ratulb/tenmo](https://github.com/ratulb/tenmo). To train the MNIST model from this post without building from source:
 
+```bash
+docker run -it ratulb/tenmo:latest /app/bin/mnist
+```
 
-
-This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. On the same machine, the numbers speak for themselves:
+This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. On the same machine, on a sanity check, following were the  numbers:
 
 | Framework | Total Time (15 epochs) | Per-Epoch |
 |-----------|----------------------|-----------|
