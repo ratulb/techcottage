@@ -481,4 +481,3 @@ This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→12
 | Tenmo (Mojo) | **39.8 s** | **2.65 s** |
 | PyTorch (CPU) | 136.8 s | 9.12 s |
 
-A `mnist_pytorch.py` script reproducing the PyTorch numbers above is included in the repository for direct comparison. The Docker image is rebuilt from the latest commit and contains only the MNIST CPU binary — no Python, no CUDA, no dependencies beyond a Linux x86-64 host.
