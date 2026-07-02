@@ -463,3 +463,22 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 ---
 
 [^1]: "CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
+
+---
+
+## Try It Yourself
+
+The complete source is on GitHub at [ratulb/tenmo](https://github.com/ratulb/tenmo). To train the MNIST model from this post without building from source:
+
+```bash
+docker run -it ratulb/tenmo:latest
+```
+
+This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. On the same machine, the numbers speak for themselves:
+
+| Framework | Total Time (15 epochs) | Per-Epoch |
+|-----------|----------------------|-----------|
+| Tenmo (Mojo) | **39.8 s** | **2.65 s** |
+| PyTorch (CPU) | 136.8 s | 9.12 s |
+
+A `mnist_pytorch.py` script reproducing the PyTorch numbers above is included in the repository for direct comparison. The Docker image is rebuilt from the latest commit and contains only the MNIST CPU binary — no Python, no CUDA, no dependencies beyond a Linux x86-64 host.
