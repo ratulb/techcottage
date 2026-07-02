@@ -474,4 +474,4 @@ The complete source is on GitHub at [ratulb/tenmo](https://github.com/ratulb/ten
 docker run -it ratulb/tenmo:latest /app/bin/mnist
 ```
 
-This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. Corresponding PyTorch is [script](https://github.com/ratulb/tenmo/mnist_pytorch.py).
+This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. Corresponding PyTorch is [script](https://github.com/ratulb/tenmo/blob/main/mnist_pytorch.py).
