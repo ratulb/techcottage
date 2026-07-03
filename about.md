@@ -28,4 +28,4 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
 ### About the Author
 
-**rbsomeg** — software engineer passionate about low-level systems, distributed systems, mojo and the Rust programming language. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
+**rbsomeg** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo, Solidity). Kubernetes, service meshes, blockchain (Solana — native Rust contracts), and machine learning. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
