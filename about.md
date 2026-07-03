@@ -17,7 +17,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
 ### Programming Sites
 - [Mojo Programming](https://ratulb.github.io/mojo_programming/)
-- [Rust Programming](https://github.com/ratulb/rust_programming)
+- [Rust Programming](https://ratulb.github.io/rust_programming)
 - [Arrows](https://ratulb.github.io/arrows/)
 
 ### Blockchain
