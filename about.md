@@ -6,7 +6,7 @@ permalink: /about/
 
 ## Tech Cottage
 
-A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Kubernetes**, **Solana**, **gRPC**, and systems programming — originally published on [rbsomeg.blogspot.com](https://rbsomeg.blogspot.com/).
+Technical writing grounded in real implementations — not tutorials from documentation, but posts that trace actual working code. Current focus: building ML systems from scratch in Mojo.
 
 ## Projects
 
@@ -28,4 +28,4 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
 ### About the Author
 
-**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo, Solidity). Kubernetes, service meshes, blockchain (Solana — native Rust contracts), and machine learning. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
+**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Mojo, Java, Rust, Scala, Python). Kubernetes, service meshes, blockchain (Solana — native Rust contracts), and machine learning. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
