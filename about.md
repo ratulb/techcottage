@@ -8,6 +8,10 @@ permalink: /about/
 
 Technical writing grounded in real implementations — not tutorials from documentation, but posts that trace actual working code. Current focus: building ML systems from scratch in Mojo.
 
+### About the Author
+
+**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Mojo, Java, Rust, Scala, Python). Kubernetes, service meshes, blockchain (Solana — native Rust contracts), and machine learning. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
+
 ## Projects
 
 ### Tensor Libraries & ML
@@ -26,6 +30,4 @@ Technical writing grounded in real implementations — not tutorials from docume
 ### Tools
 - [ChatGPT Mediator](https://ratulb.github.io/chatgpt_mediator/)
 
-### About the Author
 
-**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Mojo, Java, Rust, Scala, Python). Kubernetes, service meshes, blockchain (Solana — native Rust contracts), and machine learning. [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/)
