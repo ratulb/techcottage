@@ -11,14 +11,14 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 ## Projects
 
 ### Tensor Libraries & ML
-- [Tenmo](https://github.com/ratulb/tenmo) — tensor library and neural network framework in Mojo
+- [Tenmo](https://github.com/ratulb/tenmo) — Tensor library and neural network framework in Mojo — autograd, SIMD kernels, GPU. 3× faster than PyTorch CPU on MNIST benchmarks.
 - [MNIST Datasets](https://ratulb.github.io/mnist_datasets/)
 - [Pure CIFAR-10](https://ratulb.github.io/pure_cifar_10/)
 
 ### Programming Sites
 - [Mojo Programming](https://ratulb.github.io/mojo_programming/)
 - [Rust Programming](https://ratulb.github.io/rust_programming)
-- [Arrows](https://ratulb.github.io/arrows/)
+- [Arrows](https://ratulb.github.io/arrows/) - A distributed rust actor framework
 
 ### Blockchain
 - [Solana: On-Chain Contract & Off-Chain Client in Rust](https://ratulb.github.io/solana_program_and_rust_client/index.html)
