@@ -27,7 +27,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 - [k8s-cluster-from-source](https://github.com/ratulb/k8s-cluster-from-source) — Build a Kubernetes cluster from latest sources in LXD containers step by step, without kubeadm.
 
 ### Programming Sites
-- [Mojo Programming](https://ratulb.github.io/mojo_programming/)
+<!--- [Mojo Programming](https://ratulb.github.io/mojo_programming/)-->
 - [Rust Programming](https://ratulb.github.io/rust_programming)
 - [Arrows](https://ratulb.github.io/arrows/) — A distributed Rust actor framework
 
