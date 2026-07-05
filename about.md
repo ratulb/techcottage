@@ -30,6 +30,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 - [Rust Programming](https://ratulb.github.io/rust_programming) — Programming problems in rust
 - [Arrows](https://crates.io/crates/arrows) — A distributed Rust actor framework
 - [Mojo practice log](https://github.com/ratulb/mojo_programming) — algorithms and exercises, ongoing
+  
 ### Blockchain
 - [Solana: On-Chain Contract & Off-Chain Client in Rust](https://ratulb.github.io/solana_program_and_rust_client/index.html)
 
