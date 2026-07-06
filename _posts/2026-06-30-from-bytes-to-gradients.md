@@ -13,9 +13,13 @@ What if you could read *every line* of the system between `loss.backward()` and 
 
 This post traces one MNIST training step — `matmul → bias_add → relu → matmul → bias_add → relu → matmul → bias_add → cross_entropy` — through every layer of the system. We'll start with raw memory allocation and end with the final parameter update, showing the real code at each stage.
 
-> **Audience note:** this post assumes familiarity with autograd and basic SIMD concepts.
+<blockquote style="color: #d4d4d8; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+  <strong>Audience note:</strong> this post assumes familiarity with autograd and basic SIMD concepts.
+</blockquote>
 
-> **TL;DR:** This post traces one MNIST batch through Tenmo's full stack — memory allocation, SIMD matmul, autograd graph traversal, SGD — with real code at each step. Skip to [§8](#8-putting-it-all-together) for the unified training loop or [What the Benchmarks Say](#what-the-benchmarks-say) for the numbers.
+<blockquote style="color: #d4d4d8; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+  <strong>TL;DR:</strong> This post traces one MNIST batch through Tenmo's full stack — memory allocation, SIMD matmul, autograd graph traversal, SGD — with real code at each step. Skip to <a href="#8-putting-it-all-together">§8</a> for the unified training loop or <a href="#what-the-benchmarks-say">What the Benchmarks Say</a> for the numbers.
+</blockquote>
 
 * seed list for TOC
 {:toc}
