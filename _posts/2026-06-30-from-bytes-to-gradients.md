@@ -477,8 +477,7 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 
 The complete source is on GitHub at [ratulb/tenmo](https://github.com/ratulb/tenmo). To train the MNIST model from this post without building from source:
 
-```bash
-docker run -it ratulb/tenmo:latest /app/bin/mnist
-```
+<pre style="background: #0d2b4e;"><code style="color: #e6edf3;">docker run -it ratulb/tenmo:latest /app/bin/mnist</code></pre>
+
 
 This runs the MNIST CPU example from `examples/mnist.mojo` — the same 784→128→ReLU→32→ReLU→10 architecture traced above — compiled into a static binary inside the container. Corresponding PyTorch is [script](https://github.com/ratulb/tenmo/blob/main/mnist_pytorch.py).
