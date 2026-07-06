@@ -13,6 +13,15 @@ What if you could read *every line* of the system between `loss.backward()` and 
 
 This post traces one MNIST training step — `matmul → bias_add → relu → matmul → bias_add → relu → matmul → bias_add → cross_entropy` — through every layer of the system. We'll start with raw memory allocation and end with the final parameter update, showing the real code at each stage.
 
+> **Audience note:** this post assumes familiarity with autograd and basic SIMD concepts.
+
+> **TL;DR:** This post traces one MNIST batch through Tenmo's full stack — memory allocation, SIMD matmul, autograd graph traversal, SGD — with real code at each step. Skip to [§8](#8-putting-it-all-together) for the unified training loop or [What the Benchmarks Say](#what-the-benchmarks-say) for the numbers.
+
+* seed list for TOC
+{:toc}
+
+<!-- Line numbers referenced throughout (e.g., "buffers.mojo:122", "tensor.mojo:1080") point to specific snapshots in the Tenmo source and may shift as the codebase evolves. -->
+
 ## 1. The Memory Model — Buffer
 
 Every tensor operation eventually reads or writes a flat array of scalars. In Tenmo, that flat array is a `Buffer[dtype]` — a CPU-only, shape-agnostic block of memory with one optional feature: reference counting.
@@ -463,8 +472,6 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 ---
 
 [^1]: "CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
-
----
 
 ## Try It Yourself
 
