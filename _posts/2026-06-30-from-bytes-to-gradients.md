@@ -9,7 +9,7 @@ tenmo_link: https://github.com/ratulb/tenmo
 
 When you call `loss.backward()` in PyTorch, a C++ autograd engine climbs the computation graph in reverse, multiplying Jacobians until every leaf tensor has its gradient filled in. It works. It's fast. But the graph lives in C++ libraries you never see — `torch::autograd::Engine`, `THPVariable`, `VariableType` — hundreds of thousands of lines built over a decade.
 
-What if you could read *every line* of the system between `loss.backward()` and the weight update? That's the premise of Tenmo, a tensor library and neural network framework written entirely in Mojo. Every autograd dispatch, every SIMD matmul kernel, every GPU launch is in one repository under 100 source files.
+What if you could read *every line* of the system between `loss.backward()` and the weight update? That's the premise of Tenmo, a tensor library and neural network framework written entirely in Mojo. Every autograd dispatch, every SIMD matmul kernel, every GPU launch is in one repository in 130+ source files.
 
 This post traces one MNIST training step — `matmul → bias_add → relu → matmul → bias_add → relu → matmul → bias_add → cross_entropy` — through every layer of the system. We'll start with raw memory allocation and end with the final parameter update, showing the real code at each stage.
 
