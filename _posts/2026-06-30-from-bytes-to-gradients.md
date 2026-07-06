@@ -393,7 +393,7 @@ model = model.to_cpu(stop_grad=True)    # persist back to CPU
 
 ## 8. Putting It All Together
 
-The unified MNIST example at `examples/mnist_unified.mojo` (151 lines) ties everything together:
+The unified MNIST example at `examples/mnist.mojo` (151 lines) ties everything together:
 
 ```mojo
 def train_mnist() raises:
