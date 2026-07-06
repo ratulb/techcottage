@@ -6,7 +6,7 @@ permalink: /about/
 
 ## About the Author
 
-**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo, Solidity). Currently building **[Tenmo](https://github.com/ratulb/tenmo)**, a tensor/autograd library in Mojo. Also works across Kubernetes, service meshes, and blockchain (Solana — native Rust contracts).
+**ratulb** — software architect with 20+ years designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo). Currently building **[Tenmo](https://github.com/ratulb/tenmo)**, a tensor/autograd library in Mojo. Also works across Kubernetes, service meshes, and blockchain (Solana — native Rust contracts).
 
 [LinkedIn](https://www.linkedin.com/in/ratul-b-5747563/) · [GitHub](https://github.com/ratulb)
 
