@@ -5,7 +5,7 @@ date: 2020-08-02 18:13:00.008+00:00
 tags: [rust, data structure, merge sort]
 ---
 
-Bets about[**rust**](<https://www.rust-lang.org/>) are turning out to be right. Initially proposed as system programming language\(read servo - rewrite of firefox browser\) - numerous front end web frameworks are appearing and becoming ubiquitous. Rust has a steep learning curve - but that is a reasonable investment considering the low level power it gives to do system level things at the same time high level abstraction that comes without the price\(zero cost\). Borrow and ownership prevent memory issues, move semantics avoids data races, effort less C binding, avoidance of a runtime are some of the salient features of rust. Its implementation of [**Async & wait**](<https://rust-lang.github.io/async-book/>) is also novel.
+Bets about [**rust**](<https://www.rust-lang.org/>) are turning out to be right. Initially proposed as system programming language\(read servo - rewrite of firefox browser\) - numerous front end web frameworks are appearing and becoming ubiquitous. Rust has a steep learning curve - but that is a reasonable investment considering the low level power it gives to do system level things at the same time high level abstraction that comes without the price\(zero cost\). Borrow and ownership prevent memory issues, move semantics avoids data races, effort less C binding, avoidance of a runtime are some of the salient features of rust. Its implementation of [**Async & wait**](<https://rust-lang.github.io/async-book/>) is also novel.
 
   
 
