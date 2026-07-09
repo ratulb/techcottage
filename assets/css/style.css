@@ -56,7 +56,7 @@ html, body {
 }
 
 .post-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 300;
 }
 
@@ -66,12 +66,12 @@ html, body {
   border: none;
   box-shadow: none;
   color: #d4d4d8;
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
 .home .post-list > li {
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
 }
 
 /* Article list on home page */
@@ -101,6 +101,7 @@ html, body {
 .post-link {
   font-weight: 300;
   display: inline;
+  font-size: 2rem;
 }
 
 .post-tenmo-link,
@@ -108,7 +109,7 @@ html, body {
   font-weight: 300;
   color: #fbbf24;
   text-decoration: underline;
-  font-size: 1.5rem;
+  font-size: 2rem;
   margin-left: 0.5em;
 }
 

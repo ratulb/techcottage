@@ -3,6 +3,7 @@ layout: post
 title: "Migrate kubernetes embedded etcd to external etcd - easy back and forth switch"
 date: 2021-07-01 01:18:00.001+00:00
 tags: [kubernetes, external etcd, stacked etcd, embedded etcd]
+excerpt: "Create a multi-master kubernetes cluster from the comfort of a shell menu without tweaking a thing. Front the apiservers with load balancer of your choice - haproxy/nginx/envoy. Do hassle free back and forth switch between embedded etcd and external etcd."
 ---
 
 **Gist:  **
