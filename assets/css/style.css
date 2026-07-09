@@ -56,7 +56,7 @@ html, body {
 }
 
 .post-title {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 300;
 }
 
@@ -101,7 +101,7 @@ html, body {
 .post-link {
   font-weight: 300;
   display: inline;
-  font-size: 2rem;
+  font-size: 1.75rem;
 }
 
 .post-tenmo-link,
