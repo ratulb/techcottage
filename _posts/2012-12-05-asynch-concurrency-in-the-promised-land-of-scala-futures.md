@@ -5,9 +5,6 @@ date: 2012-12-05 08:25:00+00:00
 tags: []
 ---
 
-**_The basics:_**  
-  
-
 
 The concept of future is not new - java added them in 1.5 -scala actors had futures from the start, lift webframework had its own futures. As more and more libraries and toolkits sprang up based on the scala language - many had futures with more or less similar functionalities - akka, playframework, twitter's finagle etc had their respective implementations.
 
