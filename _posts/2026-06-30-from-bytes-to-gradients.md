@@ -359,8 +359,8 @@ def sgd_step_no_momentum_kernel[dtype: DType](
     grad: UnsafePointer[Scalar[dtype], ImmutAnyOrigin],
     num_elements: Int, lr: Scalar[dtype], weight_decay: Scalar[dtype],
 ):
-    var gtid = Int(thread_idx.x) + Int(block_idx.x) * Int(block_dim.x)
-    var stride = Int(block_dim.x) * Int(grid_dim.x)
+    var gtid = thread_idx.x + block_idx.x * block_dim.x
+    var stride = block_dim.x * grid_dim.x
     var i = gtid
     while i < num_elements:
         var p = param[i]
