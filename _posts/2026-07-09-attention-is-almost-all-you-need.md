@@ -8,7 +8,7 @@ excerpt: "Building minimal transformers for sequence reversal and sorting — an
 
 A few weeks ago I stumbled on [ATTN-11](https://github.com/dbrll/ATTN-11) — a working transformer, hand-written in PDP-11 assembly, running on 1970s hardware. One self-attention layer. One head. No feed-forward network. No decoder. It learns to reverse 8-digit sequences in about 5 minutes on actual PDP-11 silicon, hitting 100% accuracy.
 
-My first reaction was: *wait, that's it?* No stack of 96 layers, no multi-head attention, none of the machinery that makes GPT-anything expensive to train. Just attention and a projection. The whole thing is 1,216 parameters — fewer than a single convolutional filter in ResNet-50.
+My first reaction was: *wait, that's it?* No stack of 96 layers, no multi-head attention, none of the machinery that makes GPT-anything expensive to train? Just attention and a projection. The whole thing is 1,216 parameters — fewer than a single convolutional filter in ResNet-50.
 
 Which raises an obvious, slightly heretical question:
 
