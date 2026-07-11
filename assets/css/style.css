@@ -187,3 +187,8 @@ pre code {
   color: #d4d4d8;
   border-color: rgba(255,255,255,0.15);
 }
+
+/* Key idea highlights — amber, same as link color */
+.highlight-idea {
+  color: #fbbf24 !important;
+}
