@@ -12,7 +12,7 @@ My first reaction was: *wait, that's it?* No stack of 96 layers, no multi-head a
 
 Which raises an obvious, slightly heretical question:
 
-<span class="highlight-idea">**Is the transformer just a fancy wrapper around one simple idea — and everything else is decoration?**</span>
+<span class="highlight-idea">Is the transformer just a fancy wrapper around one simple idea — and everything else is decoration?</span>
 
 I decided to find out, by building the smallest possible attention models for two tasks and seeing exactly where the minimalism breaks.
 
@@ -40,7 +40,7 @@ No. Without token embeddings, every input sequence looks identical to the model 
 
 This clarified something: attention isn't magic, it's a **routing** operation. It answers "which position should I copy from?" — but something else has to supply the *payload*. Position embeddings tell you where to look. Token embeddings tell you what's there. You need both.
 
-<span class="highlight-idea">**Attention is the router.**</span> It's not the whole information pathway.
+<span class="highlight-idea">Attention is the router.</span> It's not the whole information pathway.
 
 ---
 
@@ -137,7 +137,7 @@ The "attention is all you need" framing survives, but with two asterisks: it's t
 
 ## What I'm Taking Away
 
-The transformer isn't one architecture. <span class="highlight-idea">It's a **design space**</span> — layers, heads, residuals, normalization, depth — and the right configuration depends on what kind of routing your task needs. Modern models (GPT, BERT, LLaMA) are specific points in this space, optimized for their data and scale. They're not universal recipes.
+The transformer isn't one architecture. <span class="highlight-idea">It's a design space</span> — layers, heads, residuals, normalization, depth — and the right configuration depends on what kind of routing your task needs. Modern models (GPT, BERT, LLaMA) are specific points in this space, optimized for their data and scale. They're not universal recipes.
 
 ATTN-11, running on a 1970s minicomputer with 32KB of memory, proved that attention alone is enough for a surprising range of tasks. Our experiments proved that the *scaffolding* around attention is task-dependent — and that finding the right configuration sometimes means letting go of your assumptions about what the problem needs.
 
