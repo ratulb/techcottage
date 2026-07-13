@@ -124,7 +124,7 @@ struct Gradbox[dtype: DType]:
 
 In `__init__(shape)` (line 33 of `gradbox.mojo`), it allocates one block, initializes the atomic to 1, and constructs the NDBuffer via move-init. `__init__(*, copy:)` bumps the atomic via `fetch_add[RELAXED](1)`. `__del__` decrements via `fetch_sub[RELEASE](1)`; if the result is 1 (meaning this was the last handle), it destroys the NDBuffer and frees the combined allocation.
 
-When you need to convert between the two, `Gradbox.as_tensor()` (`gradbox.mojo:118`) materializes a contiguous copy of the gradient data as a Tensor, and `Tensor.as_gradbox()` (`tensor.mojo:135`) consumes the Tensor's NDBuffer to produce a Gradbox. This metamorphosis between types is explicit — you don't accidentally use a gradient storage container as a full tensor.
+When you need to convert between the two, `Gradbox.as_tensor()` (`gradbox.mojo:118`) materializes a contiguous copy of the gradient data as a Tensor, and `Tensor.as_gradbox()` (`tensor.mojo:135`) consumes the Tensor's NDBuffer to produce a Gradbox. This metamorphosis between types is explicit — you don't accidentally use a gradient storage container as a full tensor. Note:[^1]
 
 **Ancestor** — The old Tenmo design stored full `Tensor` copies at every `add_ancestry` call, triggering recursive deep copies, gradbox allocations, and heap blocks. The current design uses a lightweight handle:
 
@@ -449,7 +449,7 @@ Training the same 4-layer MLP on identical hardware (15 epochs, batch_size=64, a
 | PyTorch | GPU (CUDA) | 14.5s | 217.2s | 98.18% |
 | PyTorch | CPU | 15.4s | 231.5s | 98.12% |
 
-**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine[^1] before GPU launch overhead pays off. On a model this small, each GPU kernel launch has too few elements to amortize its dispatch cost — the MNIST MLP does 13 kernels per forward/backward step, each with 64 rows or fewer, and the cumulative launch latency exceeds the compute time. We include the GPU number because it's an honest measurement: Tenmo's GPU path is correct and matches PyTorch GPU behavior, but small models don't benefit. The fusion work described in the Cross-Entropy section is exactly the strategy that will close this gap.
+**2.8× faster than PyTorch CPU, 2.4× faster than PyTorch GPU.** The CPU result is the headline: pure Mojo SIMD on a 104K-parameter model saturates the machine[^2] before GPU launch overhead pays off. On a model this small, each GPU kernel launch has too few elements to amortize its dispatch cost — the MNIST MLP does 13 kernels per forward/backward step, each with 64 rows or fewer, and the cumulative launch latency exceeds the compute time. We include the GPU number because it's an honest measurement: Tenmo's GPU path is correct and matches PyTorch GPU behavior, but small models don't benefit. The fusion work described in the Cross-Entropy section is exactly the strategy that will close this gap.
 
 Each design choice has a measurable payoff:
 
@@ -475,7 +475,9 @@ These aren't abstract architectural claims. Every line of code is in the reposit
 
 ---
 
-[^1]: "CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
+[^1]: Gradbox wraps the NDBuffer behind an UnsafePointer - we want to avoid copying the NDBuffer when Ancestor carries the Gradbox. We instead copy the pointer which is cheap.
+
+[^2]: "CPU's SIMD vector units sustain peak arithmetic throughput — no stalls from cache misses or memory bandwidth — because the entire 104K-parameter model (~1 MB) fits in L3 cache, so every cycle does useful FMA. On GPU, the same model dispatches 13 kernels per step with at most 64 rows each; kernel launch latency (~10–50 μs per launch) exceeds the GPU's compute time, leaving the hardware underutilized. For larger models (millions of parameters), the GPU's massive parallelism eventually dominates.
 
 ## Try It Yourself
 
