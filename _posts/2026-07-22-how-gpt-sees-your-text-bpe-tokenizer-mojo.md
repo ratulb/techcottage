@@ -8,7 +8,7 @@ excerpt: "A step-by-step build of a byte pair encoding tokenizer in Mojo, tracin
 
 ## 1. The Problem
 
-Every sentence you send to ChatGPT arrives at the model as a sequence of integers. Not words, not characters — integers. The bridge between human language and those integers is called a **tokenizer**, and the most widely used algorithm in modern LLMs is **Byte Pair Encoding (BPE)**.
+Every sentence you send to ChatGPT arrives at the model as a sequence of integers. Not words, not characters — integers. The bridge between human language and those integers is called a **tokenizer**, and the most widely used algorithm in modern LLMs is **[Byte Pair Encoding (BPE)](https://en.wikipedia.org/wiki/Byte-pair_encoding)**.
 
 GPT-4 uses it. Llama 3 uses it. Mistral, Claude, Gemini — all of them. And here's the strange part: while the transformer architectures powering these models have been rewritten multiple times (GQA, RoPE, flash attention, MoE), the BPE algorithm powering their tokenizers has remained essentially unchanged since 1994, when Philip Gage described it as a text compression technique.
 
