@@ -52,7 +52,7 @@ That's where the learning comes in.
 
 The core BPE insight is beautifully simple:
 
-> <span class="highlight-idea"> Find the most frequently adjacent pair of tokens. Merge them into a single new token.</span> Repeat.
+> <span class="highlight-idea"> Find the most frequently adjacent pair of tokens. Merge them into a single new token. Repeat.</span>
 
 Each merge creates a new vocabulary entry and compresses the text by one token per occurrence of that pair. By repeatedly merging the most common pairs, the algorithm discovers the subword units that best compress the training corpus — and those subword units turn out to be exactly the tokens the LLM wants.
 
