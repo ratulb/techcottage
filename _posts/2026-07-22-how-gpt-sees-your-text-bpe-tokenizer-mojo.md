@@ -14,7 +14,7 @@ GPT-4 uses it. Llama 3 uses it. Mistral, Claude, Gemini — all of them. And her
 
 In 2016, Sennrich, Haddow, and Birch adapted BPE for neural machine translation, showing that encoding rare words as sequences of subword units allowed translation systems to handle vocabulary they'd never seen during training. OpenAI adopted it for GPT-2 in 2019, adding a byte-level base vocabulary and a regex pre-tokenizer, and the resulting design has been the industry standard ever since.
 
-In this post we'll build a BPE tokenizer from scratch in Mojo — every merge, every byte, every design decision. By the end you'll know exactly what happens when you call `tokenizer.encode()` under the hood.
+In this post we'll build a BPE tokenizer from scratch in Mojo. By the end you'll know exactly what happens when you call `tokenizer.encode()` under the hood.
 
 ## 2. Stage 1 — From Text to Bytes: the Base Vocabulary
 
@@ -52,7 +52,7 @@ That's where the learning comes in.
 
 The core BPE insight is beautifully simple:
 
-> Find the most frequently adjacent pair of tokens. Merge them into a single new token. Repeat.
+> <span class="highlight-idea"> Find the most frequently adjacent pair of tokens. Merge them into a single new token.</span> Repeat.
 
 Each merge creates a new vocabulary entry and compresses the text by one token per occurrence of that pair. By repeatedly merging the most common pairs, the algorithm discovers the subword units that best compress the training corpus — and those subword units turn out to be exactly the tokens the LLM wants.
 
