@@ -6,8 +6,6 @@ tags: ["bpe", "tokenizer", "mojo", "nlp", "from-scratch"]
 excerpt: "A step-by-step build of a byte pair encoding tokenizer in Mojo, tracing every merge, every byte, and every design decision from raw text to token IDs."
 ---
 
-# How GPT-4 Sees Your Text: Building a BPE Tokenizer From Scratch in Mojo
-
 ## 1. The Problem
 
 Every sentence you send to ChatGPT arrives at the model as a sequence of integers. Not words, not characters — integers. The bridge between human language and those integers is called a **tokenizer**, and the most widely used algorithm in modern LLMs is **Byte Pair Encoding (BPE)**.
