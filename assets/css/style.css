@@ -6,7 +6,7 @@
 
 :root {
   --bg-gradient: linear-gradient(120deg, #0650b1, rgb(0, 128, 0));
-  --title-size: 1.68rem;
+  --title-size: 1.65rem;
 }
 
 html, body {
