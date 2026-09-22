@@ -19,7 +19,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
 ### Tensor Libraries & ML
 - [Tenmo](https://github.com/ratulb/tenmo) — Tensor library and neural network framework in Mojo — autograd, SIMD kernels, GPU. 3× faster than PyTorch CPU on MNIST benchmarks.
-- **[mbpe](https://github.com/ratulb/mbpe)** — A fast trainable byte-pair encoding engine in Mojo.
+- [mbpe](https://github.com/ratulb/mbpe) — A fast trainable byte-pair encoding engine in Mojo.
 - [MNIST Datasets](https://ratulb.github.io/mnist_datasets/)
 - [Pure CIFAR-10](https://ratulb.github.io/pure_cifar_10/)
 
