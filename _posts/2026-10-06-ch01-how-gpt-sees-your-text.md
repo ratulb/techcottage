@@ -16,13 +16,24 @@ excerpt: >
 
 *Tokens to Transformers in Mojo. Chapter 1.*
 
-This chapter does one thing: it takes text and turns it into the integers a model actually eats, and back again. Part I you build yourself — a small character-level BPE in Mojo you can hold in your head. Part II walks through the production engine — the byte-level code that trains, encodes, and matches tiktoken byte for byte. By the end you will understand why the toy isn't enough, and what each fix costs.
+This chapter does one thing: it takes text and turns it into the integers a model actually eats, and back again. Part I you build yourself — a small character-level BPE in Mojo you can hold in your head. Part II builds the real thing — the byte-level engine that trains, encodes, and matches tiktoken byte for byte. Part III proves it — benchmarks, then a fourth tokenizer on the same engine. By the end you will understand why the toy isn't enough, and what each fix costs.
 
-Nothing here is pseudo-code. Every snippet is adapted from two repos you can clone — `simple_bpe`, the toy, and `mbpe`, the engine. Exact revisions and test commands live in the box after §1.
+Nothing here is pseudo-code. Every snippet is adapted from two repos you can clone — `simple_bpe`, the toy, and `mbpe`, the engine. Exact revisions and test commands live in the "Code for this chapter" note before §3.
+
+> **What this chapter covers**
+>
+> - What a token is, and why models use tokens instead of raw text
+> - How BPE builds a vocabulary by merging frequent pairs
+> - A toy BPE in Mojo — and the four holes that break it
+> - Closing the holes: pre-tokenization, byte-level vocabularies, rank replay, file format
+> - One engine serving GPT-2, GPT-4, and GPT-4o through different fronts
+> - Proof: what makes it fast, and a fourth tokenizer on the same engine
+>
+> If you have read Raschka's tokenizer chapter, you will recognize the spine — the first divergence is the `tiktoken` handoff: he imports it, we build it.
 
 ---
 
-**Part I — The toy (§§1–4).** A character-level BPE you can hold in your head. Builds, runs, breaks in four instructive ways.
+**Part I — Learn BPE (§§1–4).** A character-level BPE you can hold in your head. Builds, runs, breaks in four instructive ways.
 
 ---
 
@@ -60,19 +71,6 @@ Note the leading space in `" world"`. Whitespace isn't stripped and added back l
 Scripts like Devanagari or emoji make the point sharper. Under GPT-2's vocabulary, `नमस्ते` and `😀` are not single tokens — they fall back to several byte-level pieces each, because GPT-2 never learned them whole. A different vocabulary trained on more Hindi or more emoji might grant them single IDs. Whether a string is "one token" is a property of the vocabulary, not of the script. Try it yourself once `mbpe` is installed (§14 lists the exact commands): encode an Assamese line under `gpt2`, `cl100k` and `o200k` and compare tokens per character across the three. That ratio is the tax a tokenizer levies on a language — and it is why tokenizer choice matters far beyond English.
 
 The history here is short. Philip Gage described byte pair encoding as a compression trick in 1994. Sennrich, Haddow and Birch repurposed it for translation in 2016: encode rare words as sequences of subword units and the vocabulary problem goes away. OpenAI shipped it in GPT-2 in 2019 (Radford et al., "Language Models are Unsupervised Multitask Learners") with a byte-level vocabulary and a regex pre-tokenizer, and that shape carried through GPT-3, GPT-4, and Llama 3. A wrinkle in the family tree: Llama 1 and 2 and early Mistral releases used SentencePiece-style BPE rather than a GPT-2 regex front — Llama 3 moved to a tiktoken-style design. The transformer changed repeatedly under the tokenizer. The BPE core barely moved.
-
-> **Before you begin.** Two repos sit underneath this chapter: `simple_bpe` (the toy — a few hundred lines, character-level) and `mbpe` (the production engine — byte-level, tiktoken-compatible). Pin the revisions before you start:
->
-> ```bash
-> git clone https://github.com/ratulb/simple_bpe
-> git clone https://github.com/ratulb/mbpe
-> cd simple_bpe && git checkout 13031914  # Jul 2026
-> cd ../mbpe && git checkout 8cef990a    # Sep 2026 (splits, loads, benchmarks verified here)
-> ```
->
-> Every "run" below refers to those two checkouts. Run the toy from its repo root with Mojo 1.1.0 (`pixi install`, then `pixi run mojo main.mojo` — 6 tests: train, encode, decode, save/load). Run the engine's suite by copying flags from its `scripts/run_tests.sh` rather than memory (`-I .` matters for everything under `tests/` and `benchmarks/`; see Pitfalls). Snippets here are trimmed for print; if a snippet and the repo ever disagree, the repo plus its tests win.
->
-> What this chapter assumes: you can read Mojo, you know what a dict and a list cost, and you have seen a transformer diagram at least once. What it doesn't assume: any prior knowledge of tokenization. If you have read Raschka's tokenizer chapter, you will recognize the spine — the first divergence is the `tiktoken` handoff: he imports it, while Part II walks through the production engine, the thing `tiktoken` itself is.
 
 ## 2. What should a token be?
 
@@ -121,6 +119,17 @@ The next question is mechanical: which pieces deserve an ID? BPE's answer is dis
 > Find the most frequent adjacent pair. Merge it. Repeat.
 
 Five words that expand into the rest of this chapter.
+
+> **Code for this chapter.** Everything below is adapted from two repos — `simple_bpe` (the toy) and `mbpe` (the engine). Pin them before building:
+>
+> ```bash
+> git clone https://github.com/ratulb/simple_bpe
+> git clone https://github.com/ratulb/mbpe
+> cd simple_bpe && git checkout 13031914  # Jul 2026
+> cd ../mbpe && git checkout 8cef990a    # Sep 2026 (splits, loads, benchmarks verified here)
+> ```
+>
+> Every "run" below refers to those two checkouts. Toy, from its repo root with Mojo 1.1.0: `pixi install`, then `pixi run mojo main.mojo` (6 tests). Engine: copy flags from its `scripts/run_tests.sh` (`-I .` matters; see Pitfalls). Snippets are trimmed for print; the repo plus its tests win. Assumes: readable Mojo, dict/list costs, one transformer diagram seen; no tokenization background.
 
 ## 3. Building BPE by hand
 
@@ -279,13 +288,13 @@ It works. It also has four holes, and each hole is a chapter section in disguise
 
 4. **A private file format.** Our save/load is JSON with our own layout. The ecosystem speaks `.tiktoken`: one line per token, base64 bytes plus rank. If you can't read and write that, you can't share vocabularies with anyone.
 
-> The toy teaches the concept. Each of these four gaps is real, and closing all four — byte-level vocab, regex pre-tokenization, rank-based encoding, and the file format — is what separates a teaching implementation from a production one. The rest of this chapter is about what it takes to close them. Not just correctness, but speed, and compatibility with the ecosystem you'll actually be working in.
+> The toy teaches the concept. Each of these four gaps is real, and closing all four — byte-level vocab, regex pre-tokenization, rank-based encoding, and the file format — is what separates a teaching implementation from a production one. The rest of this chapter is about what it takes to close them. Not just correctness, but speed, and compatibility with the ecosystem you'll be working in.
 
 That sentence is the hinge. Everything before it was Part I. Everything after is Part II.
 
 ---
 
-**Part II — The engine (§§5–12).** What it takes to close those gaps without losing correctness, speed, or compatibility with the files everyone already ships.
+**Part II — Build the real thing (§§5–12).** What it takes to close those gaps without losing correctness, speed, or compatibility with the files everyone already ships.
 
 ---
 
@@ -309,7 +318,7 @@ trait PreTokenizer(Movable & Defaultable & Deinitable & Writable):
     # ... byte_to_id / id_to_byte (identity defaults), name(), special_tokens() (empty default)
 ```
 
-`split` returns zero-copy views — no per-word allocation, the encode hot path — and the trait's default `count_words` simply delegates to it. Each production front overrides `count_words` with a fused loop that never materializes words at all — the training path. The engine is `BPETokenizer[PT]`, generic over the trait. GPT-2, GPT-4 and GPT-4o are three instantiations of one engine; the engine itself never branches on which one it is. §14 puts that claim to the test by adding a fourth.
+`split` returns zero-copy views — no per-word allocation, the encode hot path — and the trait's default `count_words` delegates to it. Each production front overrides `count_words` with a fused loop that never materializes words at all — the training path. The engine is `BPETokenizer[PT]`, generic over the trait. GPT-2, GPT-4 and GPT-4o are three instantiations of one engine; the engine itself never branches on which one it is. §14 puts that claim to the test by adding a fourth.
 
 ## 6. Training by counting and merging
 
@@ -341,7 +350,7 @@ Training counts and decides. Encoding obeys. Given a new string:
 1. Split it with the same pre-tokenizer.
 2. Replay the merges in rank order — at every step, the lowest-rank applicable pair wins.
 
-No counting. The merge list is a script; encoding executes it. This also closes gap 3 from §4, though the machinery arrives in two halves: this section fixes the *order* (rank replay instead of scanning rules in storage order), and §12 supplies the *table* (a flat `bytes → rank` lookup plus merge rules recovered from ranks, so the hot loop indexes instead of sweeping).
+No counting. The merge list is a script; encoding executes it. This also closes gap 3 from §4: this section fixes the *order* (rank replay instead of scanning rules in storage order), and §12 supplies the *table*.
 
 Replay `low`-family rules on `lowering`, a word the corpus never contained: `l o w e r i n g` -> `lo w e r i n g` -> `low e r i n g` -> `lowe r i n g`. The learned prefix fires on unseen input because the prefix is shared. That generalization is why a bounded vocabulary covers unbounded text.
 
@@ -390,6 +399,8 @@ Two patterns to read off the table. First, the GPT-4 family shares three behavio
 Same table serves all three. The mapping and the regex live behind the trait boundary. The engine doesn't know.
 
 ## 10. One engine, many fronts
+
+Here is the whole trick of Part II in one declaration:
 
 ```mojo
 struct BPETokenizer[PT: PreTokenizer = GPT2Pretokenizer](
@@ -441,11 +452,13 @@ Round-trips are exact across save/load. Compatibility is checked by test, not as
 
 ---
 
-**Part III — Evidence (§§13–14).** Measured speed with the caveats stated alongside, then the live proof that the engine is generic. Takeaways and references follow; deeper systems detail stays in §§11–13 rather than a separate appendix.
+**Part III — Prove it (§§13–14).** Measured speed with the caveats stated alongside, then the live proof that the engine is generic. Takeaways and references follow; deeper systems detail stays in §§11–13 rather than a separate appendix.
 
 ---
 
 ## 13. Benchmarks
+
+Mechanism so far; now measurement. Same files, same API, one core:
 
 Corpus: *Alice in Wonderland* (~150–170 KB), repeated/concatenated to 5 MB so per-call overhead amortizes. Metric: millions of tokens/sec, higher better, best-of-3 runs on one core (single-threaded throughout) — best-of-3 reports the peak; medians and spread are in `benchmarks/results/`, and short-string workloads will show smaller margins where call overhead dominates. Same shipped `.tiktoken` files for every implementation. Environment, regenerated per run: AMD EPYC 9B45, 4 cores, 15 Gi RAM, Debian 12; Python 3.14.7, Rust 1.98.1, tiktoken 0.14.0. One version note: this benchmark run used Mojo 1.0.0, while the chapter's snippets are pinned and verified on Mojo 1.1.0 — rerun `benchmarks/run.sh` to refresh the numbers; the rig, not the table, is the durable artifact.
 
