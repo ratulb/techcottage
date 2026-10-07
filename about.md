@@ -29,7 +29,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 - [k8s-cluster-from-source](https://github.com/ratulb/k8s-cluster-from-source) — Build a Kubernetes cluster from latest sources in LXD containers step by step, without kubeadm.
 
 ### Writing
-- [Tokens to Transformers in Mojo](https://ratulb.github.io/tokens-to-transformers/) — Build a GPT-2 from scratch in Mojo, from bytes to training loop. Chapter 1 free to read.
+- [Tokens to Transformers in Mojo](https://ratulb.github.io/tokens-to-transformers/) — Build a GPT-2 from scratch in Mojo, from bytes to training loop. Chapter 1 is ready.
 - [Rust Programming](https://ratulb.github.io/rust_programming) — Programming problems in rust
 - [Arrows](https://crates.io/crates/arrows) — A distributed Rust actor framework
 
