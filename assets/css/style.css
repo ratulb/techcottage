@@ -189,6 +189,22 @@ pre code {
   border-color: rgba(255,255,255,0.15);
 }
 
+/* Book banner on the home page */
+.book-banner {
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 6px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  color: #d4d4d8;
+  font-size: 1.125rem;
+}
+
+.book-banner a,
+.book-banner a:visited {
+  color: #fbbf24;
+}
+
 /* Key idea highlights — amber, same as link color */
 .highlight-idea {
   color: #fbbf24 !important;
