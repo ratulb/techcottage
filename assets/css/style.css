@@ -25,6 +25,26 @@ html, body {
   box-shadow: none !important;
 }
 
+/* Widen content: minima defaults to 800px total; use 1100px so the
+   outer .wrapper (and inner article.post, which fills it) use more
+   of wide screens while staying fluid on small devices */
+.wrapper {
+  max-width: calc(1100px - (30px * 2)) !important;
+  padding-right: 30px !important;
+  padding-left: 30px !important;
+}
+
+@media screen and (max-width: 800px) {
+  .wrapper {
+    max-width: calc(1100px - (30px)) !important;
+    padding-right: 15px !important;
+    padding-left: 15px !important;
+  }
+  .post {
+    padding: 1rem 1rem;
+  }
+}
+
 /* Light text on gradient */
 .site-title,
 .site-title:visited,
