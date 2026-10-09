@@ -1,5 +1,5 @@
 ---
-title: "How GPT-4 Sees Your Text: Building a BPE Tokenizer in Mojo"
+title: "How GPT-2 Sees Your Text: Building a BPE Tokenizer in Mojo"
 date: "2026-07-22"
 categories: ["Machine Learning", "Mojo"]
 tags: ["bpe", "tokenizer", "mojo", "nlp", "from-scratch"]
@@ -166,7 +166,7 @@ With a richer corpus like the four-sentence Hugging Face example, 19 merges fill
 "This is not a token." → [This, Ġis, Ġ, n, o, t, Ġa, Ġtoken, .]
 ```
 
-Nine tokens instead of 19 characters — a 53% reduction.
+Nine tokens instead of 20 characters — a 55% reduction.
 
 ## 4. Stage 3 — Encoding: Applying the Merge Rules
 
@@ -176,7 +176,7 @@ Once the tokenizer is trained, encoding new text reverses the training process. 
 def _tokenize(self, text: String) raises -> List[String]:
     if text.byte_length() == 0:
         return List[String]()
-    var words = PreTokenizer.tokenize(text)
+    var words = PreTokenizer.split(text)
     var splits = [
         [chr(Int(code)) for code in word.codepoints()]
         for word in words
@@ -207,7 +207,7 @@ The pre-tokenizer handles the GPT-2 `Ġ` convention:
 ```mojo
 struct PreTokenizer:
     @staticmethod
-    def tokenize[
+    def split[
         spacer: StaticString = "Ġ",
     ](var text: String) raises -> List[String]:
         var splits = (
@@ -304,10 +304,10 @@ Our tokenizer works, but if you compare it against GPT-4's tokenizer (tiktoken),
 
 ### Gap 1: Regex Pre-Tokenization
 
-Our `PreTokenizer` replaces spaces with `Ġ` and splits on periods. GPT-2 uses a regex that categorizes text into groups:
+Our `PreTokenizer` replaces spaces with `Ġ` and splits on periods. GPT-2 uses a regex that categorizes text into groups (the exact pattern, from tiktoken):
 
 ```
-'(?:[sdmt]|ll|ve|re)| ?\p{L}++| ?\p{N}++| ?[^\s\p{L}\p{N}]++|\s++$|\s+(?!\S)|\s
+'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+
 ```
 
 This pattern splits contractions (`'s`, `'t`, `'re`, `'ve`, `'m`, `'ll`, `'d`) into separate tokens, groups letters and numbers into their own categories, and handles whitespace independently. The result is that BPE **never merges across category boundaries** — a digit won't merge with a letter, and punctuation stays separate.
@@ -318,12 +318,12 @@ Karpathy's [minBPE](https://github.com/karpathy/minbpe) has two tokenizer classe
 
 Our character-level vocabulary only covers codepoints seen during training. If you send an emoji or CJK character that wasn't in the corpus, it maps to `<UNK>`. This is the approach used by BERT and DistilBERT.
 
-GPT-2, GPT-4, Llama 3, and Mistral all use a **byte-level** base vocabulary instead. Every UTF-8 character decomposes into 1-4 bytes (values 0-255), so by starting with all 256 possible bytes as the base vocabulary, the tokenizer is **lossless** — no character can ever be unknown. This is why `encode(decode(x)) == x` holds for any Unicode string with GPT-4's tokenizer.
+GPT-2, GPT-4, Llama 3, and Mistral all use a **byte-level** base vocabulary instead. Every UTF-8 character decomposes into 1-4 bytes (values 0-255), so by starting with all 256 possible bytes as the base vocabulary, the tokenizer is **lossless** — no character can ever be unknown. This is why `decode(encode(x)) == x` holds for any Unicode string with GPT-4's tokenizer.
 
 The implementation is straightforward: instead of scanning the corpus for unique characters, initialize the vocabulary with `[chr(i) for i in range(256)]`:
 
 ```python
-# From minBPE — the byte-level base
+# The byte-level base, after minBPE's integer vocab
 unique_chars = [chr(i) for i in range(256)]
 ```
 
@@ -331,15 +331,7 @@ The only complication is that some byte values correspond to Unicode control cha
 
 ### Gap 3: Rank-Based Encoding (tiktoken)
 
-Our tokenizer stores merge rules as an ordered list of `(pair) → merged` mappings and applies them sequentially. tiktoken takes a different approach: instead of storing explicit pairs, it stores a flat `bytes → rank` table. The rank is simply the order in which the merge was learned.
-
-Encoding becomes a **greedy longest-match** algorithm:
-1. Start with the raw bytes of the word
-2. Find the lowest-ranked token that matches a prefix of the byte sequence
-3. Emit that token's ID
-4. Advance past those bytes and repeat
-
-This is algorithmically equivalent to applying merge rules in order, but it's faster (single lookup per token instead of scanning all merge rules) and the file format is simpler — one line per token, base64-encoded bytes plus rank.
+Our tokenizer stores merge rules as an ordered list of `(pair) → merged` mappings and applies them sequentially. tiktoken stores the same information the other way round: a flat table from each token's bytes to its **rank** — the position of its merge in the learned order. Encoding replays the merges lowest-rank-first, exactly as ours does, but the rank table turns each pair lookup into a direct comparison instead of a scan over all rules. The file format follows: one line per token, base64-encoded bytes plus rank.
 
 You can see the educational version in [tiktoken's own `_educational.py`](https://github.com/openai/tiktoken/blob/main/tiktoken/_educational.py).
 
@@ -359,11 +351,11 @@ All five stages are stored in a single `tokenizer.json` file, making the tokeniz
 
 ## 8. Common Pitfalls
 
-**Dict iteration order.** Our implementation stores merges in a `Dict[Tuple[String, String], String]`. Mojo (like most systems languages) doesn't guarantee iteration order for hash maps. If `merges.items()` returns pairs in a different order than they were inserted, the encoding will apply merge rules in the wrong sequence and produce incorrect tokens. The fix is to switch to a `List[Tuple[Tuple[String, String], String]]` — slower insertion, guaranteed order.
+**Dict iteration order.** Our implementation stores merges in a `Dict[Tuple[String, String], String]`, and `encode` replays `merges.items()` in insertion order — so encoding depends on the dictionary yielding rules oldest-first. That holds in practice, and `test_deterministic` pins it by training twice and comparing, but Mojo guarantees nothing about hash-map order. A port must carry an order-preserving structure, and `encode` would have to iterate that instead.
 
 **Running out of merges.** If the training corpus is too small for the target `vocab_size`, the training loop runs out of pairs to merge and would loop forever without the `if len(pair_freqs) == 0: break` guard. This happens with our `"hello world"` corpus at vocab_size 30 — only 9 merges are possible before each word is a single token.
 
-**The `Ġ` character is U+0120.** It's a real Unicode codepoint (Latin capital letter G with inverted breve), not a special marker invented for tokenization. If your source code or training data accidentally contains a literal `Ġ`, it will be treated as a space marker and cause decoding errors. GPT-2 chose this character because it almost never appears in real text.
+**The `Ġ` character is U+0120.** It's a real Unicode codepoint (Latin capital letter G with inverted breve), not a special marker invented for tokenization. It is U+0120 because that is the codepoint GPT-2's byte map assigns to the space byte — the marker is the space's rank made visible. If your source code or training data accidentally contains a literal `Ġ`, it will be treated as a space marker and cause decoding errors.
 
 **UNK vs unknown characters.** Character-level tokenizers (ours) produce `<UNK>` for characters outside the training set. Byte-level tokenizers don't have this problem — every possible byte is in the vocabulary. If you're building a tokenizer for production use, start with byte-level.
 
@@ -379,8 +371,19 @@ We built a complete BPE tokenizer in Mojo — train, encode, decode, save, and l
 
 The next step is to swap our character-level base vocabulary for the full 256-byte range and add a proper GPT-2-style regex pre-tokenizer. At that point, our tokenizer would be functionally equivalent to GPT-2's, capable of encoding any Unicode string without a single `<UNK>`.
 
-The full source for this post is at [github.com/ratulb/simple_bpe](https://github.com/ratulb/simple_bpe). If you want to see these concepts pushed further, study [minBPE](https://github.com/karpathy/minbpe) (clean educational Python), [tiktoken](https://github.com/openai/tiktoken) (production Rust), and the [Hugging Face tokenizers](https://huggingface.co/docs/tokenizers/) library.
+The full source for this post is at [github.com/ratulb/simple_bpe](https://github.com/ratulb/simple_bpe/tree/012a278871784000c17f9b6349e27b58842115a5). If you want to see these concepts pushed further, study [minBPE](https://github.com/karpathy/minbpe) (clean educational Python), [tiktoken](https://github.com/openai/tiktoken) (production Python, with its core in Rust), and the [Hugging Face tokenizers](https://huggingface.co/docs/tokenizers/) library.
+
+## Run it
+
+```bash
+git clone https://github.com/ratulb/simple_bpe
+cd simple_bpe
+pixi install
+pixi run mojo main.mojo
+```
+
+`main.mojo` runs six tests covering training, encoding, decoding, and saving and loading. All code excerpts above are from revision `012a2788`; file paths are relative to that revision.
 
 ---
 
-*Thanks to Sebastian Raschka's [BPE from scratch](https://sebastianraschka.com/blog/2025/bpe-from-scratch.html) post and the [Hugging Face NLP course](https://huggingface.co/learn/nlp-course/chapter6/5) for their excellent references.*
+*Thanks to Sebastian Raschka's [BPE from scratch](https://sebastianraschka.com/blog/2025/bpe-from-scratch.html) post and the [Hugging Face LLM course](https://huggingface.co/learn/llm-course/chapter6/5) for their excellent references.*
