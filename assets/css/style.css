@@ -209,3 +209,19 @@ pre code {
 .highlight-idea {
   color: #fbbf24 !important;
 }
+
+/* Blockquotes — override minima default (#828282 on #e8e8e8, built for
+   white backgrounds) for readable light text on dark gradient */
+.post-content blockquote {
+  color: #e4e4e7 !important;
+  border-left: 4px solid #fbbf24 !important;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.8rem 1.2rem;
+  border-radius: 0 6px 6px 0;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+}
+
+.post-content blockquote strong {
+  color: #ffffff !important;
+}
