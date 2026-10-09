@@ -1,5 +1,5 @@
 ---
-title: "How GPT-4 Sees Your Text: Building a BPE Tokenizer From Scratch in Mojo"
+title: "How GPT-4 Sees Your Text: Building a BPE Tokenizer in Mojo"
 date: "2026-07-22"
 categories: ["Machine Learning", "Mojo"]
 tags: ["bpe", "tokenizer", "mojo", "nlp", "from-scratch"]
