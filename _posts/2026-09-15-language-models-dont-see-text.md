@@ -349,7 +349,7 @@ The six steps are:
 5. **Update** the pair counts incrementally — only the pairs that changed, not a full recount.
 6. **Repeat** from step 3 until the vocabulary reaches its target size, or until no pair has positive count.
 
-Steps 3–6 are the loop. Steps 1–2 run once, at the start. The rest of this section explains each step, then traces the whole loop by hand on a real example. A second trace, on a multi-word corpus, follows at the end to show the general case.
+Steps 3–6 are the loop. Steps 1–2 run once, at the start. The rest of this section explains each step, then walks through the whole loop by hand on a real example. A second example, on a multi-word corpus, follows at the end to show the general case.
 
 ### Step 1 — Split into words, count frequencies
 
@@ -357,7 +357,7 @@ Every BPE run starts with a corpus. The first thing to do is pre-tokenize it ([�
 
 Real corpora are millions of lines, but the algorithm doesn't change with size. What matters is the compression step: instead of storing every occurrence of every word, we store each *distinct* word once with a frequency. On a real corpus this is the difference between iterating over a billion tokens and iterating over a million distinct word forms.
 
-For the main trace, we'll use a single-word corpus — one distinct word occurring once — so frequency weighting doesn't obscure the mechanics. The general case — with repeated words — appears in the sidebar at the end of this section.
+For the main example, we'll use a single-word corpus — one distinct word occurring once — so frequency weighting doesn't obscure the mechanics. The general case — with repeated words — appears in the sidebar at the end of this section.
 
 Corpus: `["aaabdaaabac"]`
 
@@ -381,7 +381,7 @@ This pair-count table is the entire state of the algorithm at this point. BPE's 
 
 ### Step 4 — Merge the most frequent pair
 
-Pick the most frequent pair and merge it. When `(l, o)` is merged, every occurrence of `l` followed by `o` becomes a single new unit — call it `lo` — and it gets the next available token ID.
+Pick the most frequent pair and merge it. When `(a, b)` is merged, every occurrence of `a` followed by `b` becomes a single new unit — call it `merged` — and it gets the next available token ID.
 
 **Ties.** If two pairs have the same count, some rule has to pick one. `mbpe` follows the convention `tiktoken` uses: keep the incumbent — the pair that was inserted into the pair-count dict first, which, given the corpus is walked in order, means the pair seen earliest. The rule matters because two implementations that break ties differently learn different IDs, and IDs are baked into model weights (recall [§1](#1-language-models-dont-see-text)'s compatibility contract). Any deterministic tie-break is acceptable, and it must be reproducible — the test suite pins it with `test_train_tie_breaking_is_deterministic` (in `tests/exhaustive_tokenizer.mojo`).
 
@@ -402,7 +402,7 @@ Everything else is untouched. This is the bookkeeping that makes the loop run in
 
 Go back to step 3. The state is smaller now — some pairs have been destroyed, some created — so the "most frequent pair" is likely different from last time. Keep merging until the vocabulary reaches `vocab_size` or no pair has positive count.
 
-### The main trace: `aaabdaaabac`
+### The main example: `aaabdaaabac`
 
 The canonical example — from the BPE Wikipedia article, and a pinned test in this repo (`test_wikipedia_example`, in `tests/test_tokenizer.mojo`) — is the string `aaabdaaabac`. Eleven tokens, small enough for paper, real enough to matter.
 
@@ -440,7 +440,7 @@ t.encode("aaabdaaabac")     # [258, 100, 258, 97, 99]
 Now we know what training produces. Encoding is where that gets used, and the merge order itself is the load-bearing piece: [§5](#5-encode-replays--it-never-counts) is built on the rank ordering of these merges.
 
 #### Sidebar: frequency weighting across words
-The main trace above uses a single-word corpus, so every pair count is 1 or 2 and every merge happens within one word. Real corpora are not like that. This sidebar runs the same six steps on a multi-word corpus with repeated words, to show what frequency weighting looks like in the general case.
+The main example above uses a single-word corpus (`aaabdaaabac` ×1), so pair counts are small and unweighted (`aa=4, ab=2, rest=1`) and every merge happens within one word. Real corpora are not like that. This sidebar runs the same six steps on a multi-word corpus with repeated words, to show what frequency weighting looks like in the general case.
 
 Corpus: `low low low lower lowest`. Five occurrences, three distinct words.
 
@@ -465,7 +465,7 @@ Step 3 — count pairs, weighted by frequency:
 
 Notice the weighting. The pair `(l, o)` appears once in each of the three words, and `low` occurs three times — so the contribution from `low` alone is 3. The other two contribute 1 each. Total 5.
 
-**Step 4 — Merge 1**. `(l, o)` and `(o, w)` are tied at 5. The tie goes to `(l, o)` because it was first seen earlier (in every word, `l` precedes `o` precedes `w`, so `(l, o)` was inserted into the count table first). Token 256 = `"lo"`. Rewrite:
+**Step 4 — Merge 1**. `(l, o)` and `(o, w)` are tied at 5. The tie goes to `(l, o)` because it was first seen earlier (in every word, `l` precedes `o` precedes `w`, so `(l, o)` was inserted into the pair-count dict first). Token 256 = `"lo"`. Rewrite:
 
 | word | breakup | frequency |
 |---|---|---|
