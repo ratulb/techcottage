@@ -357,7 +357,13 @@ Every BPE run starts with a corpus. The first thing to do is pre-tokenize it ([�
 
 Real corpora are millions of lines, but the algorithm doesn't change with size. What matters is the compression step: instead of storing every occurrence of every word, we store each *distinct* word once with a frequency. On a real corpus this is the difference between iterating over a billion tokens and iterating over a million distinct word forms.
 
-For the main trace, we'll use a single-word corpus where every count is 1, so the weighting doesn't obscure the mechanics. The general case — with repeated words — appears in the sidebar at the end of this section.
+For the main trace, we'll use a single-word corpus — one distinct word occurring once — so frequency weighting doesn't obscure the mechanics. The general case — with repeated words — appears in the sidebar at the end of this section.
+
+Corpus: `["aaabdaaabac"]`
+
+| word | frequency |
+|---|---|
+| `aaabdaaabac` | ×1 |
 
 ### Step 2 — Break each word into base units
 
@@ -371,13 +377,13 @@ The initial vocabulary is therefore 256 entries: one for each possible byte valu
 
 For every distinct word, look at each adjacent pair of units and count how often that pair occurs — weighted by the word's frequency. A pair that appears in a word occurring three times contributes 3; a pair that appears in a word occurring once contributes 1.
 
-This table is the entire state of the algorithm at this point. BPE's next move is determined by it. There is no other signal — no dictionary, no part-of-speech tagger, no morphological analysis. Just these counts.
+This pair-count table is the entire state of the algorithm at this point. BPE's next move is determined by it. There is no other signal — no dictionary, no part-of-speech tagger, no morphological analysis. Just these counts.
 
 ### Step 4 — Merge the most frequent pair
 
 Pick the most frequent pair and merge it. When `(l, o)` is merged, every occurrence of `l` followed by `o` becomes a single new unit — call it `lo` — and it gets the next available token ID.
 
-**Ties.** If two pairs have the same count, some rule has to pick one. `mbpe` follows the convention `tiktoken` uses: keep the incumbent — the pair that was inserted into the count table first, which, given the corpus is walked in order, means the pair seen earliest. The rule matters because two implementations that break ties differently learn different IDs, and IDs are baked into model weights (recall [§1](#1-language-models-dont-see-text)'s compatibility contract). Any deterministic tie-break is acceptable, and it must be reproducible — the test suite pins it with `test_train_tie_breaking_is_deterministic` (in `tests/exhaustive_tokenizer.mojo`).
+**Ties.** If two pairs have the same count, some rule has to pick one. `mbpe` follows the convention `tiktoken` uses: keep the incumbent — the pair that was inserted into the pair-count dict first, which, given the corpus is walked in order, means the pair seen earliest. The rule matters because two implementations that break ties differently learn different IDs, and IDs are baked into model weights (recall [§1](#1-language-models-dont-see-text)'s compatibility contract). Any deterministic tie-break is acceptable, and it must be reproducible — the test suite pins it with `test_train_tie_breaking_is_deterministic` (in `tests/exhaustive_tokenizer.mojo`).
 
 ### Step 5 — Update pair counts incrementally
 
@@ -400,7 +406,7 @@ Go back to step 3. The state is smaller now — some pairs have been destroyed, 
 
 The canonical example — from the BPE Wikipedia article, and a pinned test in this repo (`test_wikipedia_example`, in `tests/test_tokenizer.mojo`) — is the string `aaabdaaabac`. Eleven tokens, small enough for paper, real enough to matter.
 
-**Step 1–2.** The corpus is one word, occurring once. Split into bytes: `a a a b d a a a b a c`. Byte values for the record: `a=97, b=98, c=99, d=100`.
+**Step 1–2.** From the word-frequency table above: one distinct word, ×1. Split into bytes: `a a a b d a a a b a c`. Byte values for the record: `a=97, b=98, c=99, d=100`.
 
 **Step 3 — count every adjacent pair:**
 
@@ -412,9 +418,9 @@ The canonical example — from the BPE Wikipedia article, and a pinned test in t
 
 **Step 4 — Merge 1.** `aa` wins → new token 256 = `"aa"`. Rewrite: `256 a b d 256 a b a c`.
 
-**Step 5.** Pair counts change. `(a, a)` is gone; `(256, a)` appears where `aa` is followed by `a`; `(b, d)` and `(256, b)` shift around. Update incrementally.
+**Step 5.** Pair counts change. `(a, a)` is gone; `(256, a)=2` appears where `aa` is followed by `a`; `(a, b)=2` persists; `(b, d)=1` persists. Update incrementally.
 
-**Step 6 → Step 3 (again).** No recount — the table was updated in place, and it remembers history. Now `([256], a)` and `(a, b)` are tied at 2 each. The tie is broken toward `(a, b)`: it was inserted into the count table back when the corpus was walked in order, long before token 256 existed, so the incumbent wins. Had the table been rebuilt from the rewritten sequence, `([256], a)` — sitting at position 0 — would have won instead, and every ID downstream would differ. The table's memory *is* the determinism contract. Token 257 = `"ab"`. Rewrite: `256 257 d 256 257 a c`.
+**Step 6 → Step 3 (again).** No recount — the pair-count dict was updated in place, and it remembers history. Now `([256], a)` and `(a, b)` are tied at 2 each. The tie is broken toward `(a, b)`: it was inserted into the pair-count dict back when the corpus was walked in order, long before token 256 existed, so the incumbent wins. Had the dict been rebuilt from the rewritten sequence, `([256], a)` — sitting at position 0 — would have won instead, and every ID downstream would differ. The dict's memory *is* the determinism contract. Token 257 = `"ab"`. Rewrite: `256 257 d 256 257 a c`.
 
 **Merge 3.** `([256], [257])` occurs twice → token 258 = `"aaab"`. Final: `258 d 258 a c`, i.e. IDs `[258, 100, 258, 97, 99]`.
 
