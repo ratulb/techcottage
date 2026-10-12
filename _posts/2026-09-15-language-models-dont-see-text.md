@@ -20,7 +20,7 @@ That translation raises some interesting questions. What should a token represen
 
 This separation matters because a tokenizer is more than a BPE algorithm. Its vocabulary and the rules governing how text is split and represented are part of what makes one encoding different from another. And in an ecosystem where OpenAI's `tiktoken` is an established reference point, compatibility matters as much as architecture. `mbpe` reads and writes the standard `.tiktoken` vocabulary format, and its implementations reproduce the `GPT-2`, `GPT-4`, and `GPT-4o` vocabularies byte-for-byte and validates vocabulary parity with an extensive test suite.
 
-But compatibility is only part of the story. `mbpe` can also train a tokenizer from scratch, giving the same engine a life beyond reproducing existing encodings. The result is a Mojo implementation that brings together a reusable BPE core, established encoding compatibility, lossless text reconstruction, and native performance.
+But compatibility is only part of the story. `mbpe` can also **train a tokenizer** from scratch, giving the same engine a life beyond reproducing existing encodings. The result is a Mojo implementation that brings together a reusable BPE core, established encoding compatibility, lossless text reconstruction, and native performance.
 
 This post builds the background from the ground up before examining how mbpe works, why it is designed this way, and what it takes to make it fast. We'll move from the fundamentals of tokenization to the mechanics of BPE, then into the implementation, its optimizations, and its performance against established alternatives.
 
