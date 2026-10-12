@@ -873,7 +873,7 @@ The payoff of all this is that `BPETokenizer` itself is tiktoken-agnostic. Its b
 
 It stores a pre-tokenizer instance (`var pt: Self.PT`), calls only `self.pt.split(text)` / `self.pt.count_words(text, counts)`, and implements `train`, `encode`, `decode` in terms of those plus its tables (merge rules, lookup, byte-to-rank, token bytes, specials).
 
-There is no `if Self.PT is GPT2Pretokenizer` anywhere. No branch on "which tokenizer am I." The engine doesn't know it's GPT-2 or GPT-4o; it just knows it has a pre-tokenizer, merge rules, and a token table, and it operates on those. Everything tokenizer-specific — the byte mapping, the split rules, the special tokens — lives behind the trait boundary.
+There is no `if Self.PT is GPT2Pretokenizer` anywhere. No branch on "which pre-tokenizer am I." The engine doesn't know it's GPT-2 or GPT-4o; it just knows it has a pre-tokenizer, merge rules, and a token table, and it operates on those. Everything tokenizer-specific — the byte mapping, the split rules, the special tokens — lives behind the trait boundary.
 
 That's what "one engine" means. And that's what makes [§11](#11-one-more-tokenizer-built-live)'s live build possible: adding a fourth tokenizer is writing a new `PreTokenizer` struct, not modifying `BPETokenizer`.
 
@@ -887,11 +887,11 @@ A detail worth clarifying: `BPETokenizer` implements the `Tokenizer` trait (from
 
 `BPETokenizer[PT]` has a PreTokenizer as a type parameter and implements `Tokenizer` itself. That's the composition: the pre-tokenizer is a component, the tokenizer is the composite.
 
-The shape is settled; the bills are not. Every abstraction above — the generic, the trait, the three instantiations — has a cost, and [§8](#8-how-it-earns-its-speed) is the audit: where the costs were, and how each one got eliminated.
+So far, we have seen the components of `mbpe`. Every abstraction above — the `BPETokenizer`, the `PreTokenizer` trait and its three instantiations — has a cost, and [§8](#8-how-it-earns-its-speed) is the audit: where the costs are, and how each one is minimised.
 
 ## 8. How it earns its speed
 
-Every section so far has been about *what* `mbpe` does. This one is about *how fast* it does it, and why. Speed is not a single decision — it's a stack of them, each one eliminating a cost that a naive implementation would pay. The stack has five layers plus one compile-time bonus, and this section walks them in order from the lowest (memory layout) to the highest (algorithm selection).
+Every section so far has been about *what* `mbpe` does. This section is about how we make it fast and memory efficient. Speed is not a single decision — it's a stack of them, each one eliminating a cost that a naive implementation would pay. The stack has five layers plus one compile-time bonus, and this section examines them in order from the lowest (memory layout) to the highest (algorithm selection).
 
 The five layers are:
 
@@ -901,7 +901,7 @@ The five layers are:
 4. **Incremental pair-count updates during training.** Each merge touches only the pairs that changed, not the whole corpus.
 5. **Two encode algorithms, chosen by word length.** Short words use a linear scan; long words use a heap.
 
-The section covers each layer, then looks at the benchmark numbers and asks which layers are actually contributing.
+The section covers each layer, then looks at the benchmark numbers and checks which layers are actually contributing.
 
 ### Layer 1 — `StringSpan` instead of `String`
 
@@ -913,7 +913,7 @@ The `origin` parameter in `StringSpan[origin]` is a Mojo lifetime parameter. It 
 
 The same idea applies in reverse at decode time. `decode(ids)` builds one `String` of the right total length, then `unsafe_memcpy`s each token's bytes into it. One allocation, N memcpy calls. The alternative — concatenating strings one at a time — would allocate and copy repeatedly, growing a string N times.
 
-**The cost this eliminates:** per-word heap allocation on encode, and per-token heap allocation on decode. On a corpus with millions of words, that's millions of allocations removed.
+**The cost this eliminates:** per-word heap allocation on encode, and per-token heap allocation on decode. On a corpus with **millions of words, that's millions** of allocations removed.
 
 ### Layer 2 — The flat byte arena
 
@@ -956,7 +956,7 @@ This is the training-side optimization, and it's the one that turns an `O(n²)` 
 
 A naive BPE trainer, after each merge, rescans the entire corpus to recompute pair frequencies. If the corpus has `W` words and each word has `L` tokens, one rescan is `O(W × L)`, and you do that for each of `V` merges — total `O(V × W × L)`. For a real vocabulary of 50,000 merges over a corpus of a million words, that's tens of billions of operations.
 
-`mbpe` never rescans. It maintains the pair counts incrementally: after each merge, only the pairs that changed are updated — the same five updates [§4](#4-training-by-counting-and-merging) walked through (`(a, b)`, `(prev, a)`, `(b, next)` destroyed; `(prev, merged)`, `(merged, next)` created in each affected word). That's five pair updates per merge occurrence, vs. `L` operations for a full rescan. The improvement is roughly `L/5` — for a word of 5 tokens, the incremental update is the same cost as the rescan; for a word of 50 tokens, it's `10×` cheaper. Real words are usually 5–15 tokens, so the improvement is modest per-word — but the key is that the rescan cost is `O(corpus)` per merge, while the incremental cost is `O(affected words)` per merge. If a pair appears in only a small fraction of the corpus — which is true for most merges after the first few — the incremental approach is dramatically cheaper on aggregate.
+`mbpe` never rescans. It manages the pair counts incrementally: after each merge, only the pairs that changed are updated — the same five updates [§4](#4-training-by-counting-and-merging) walked through (`(a, b)`, `(prev, a)`, `(b, next)` destroyed; `(prev, merged)`, `(merged, next)` created in each affected word). That's five pair updates per merge occurrence, vs. `L` operations for a full rescan. The improvement is roughly `L/5` — for a word of 5 tokens, the incremental update is the same cost as the rescan; for a word of 50 tokens, it's `10×` cheaper. Real words are usually 5–15 tokens, so the improvement is modest per-word — but the key is that the rescan cost is `O(corpus)` per merge, while the incremental cost is `O(affected words)` per merge. If a pair appears in only a small fraction of the corpus — which is true for most merges after the first few — the incremental approach is dramatically cheaper on average.
 
 There's a second data structure that makes this possible: `where_dict`. It maps a pair key to the list of word indices containing that pair. When a merge is chosen, `where_dict[best_key]` tells you exactly which words to visit — no scanning for occurrences. Without it, you'd still need to find affected words, which would be another `O(corpus)` scan per merge.
 
