@@ -5,7 +5,6 @@ categories: ["Machine Learning", "Mojo"]
 tags: ["bpe", "tokenization", "mojo", "tiktoken", "nlp"]
 excerpt: "A fast, trainable byte-pair encoding tokenizer in Mojo, byte-for-byte compatible with tiktoken — with benchmarks and a live demonstration of extending it."
 ---
-# Language Models Don't See Text
 
 *A BPE tokenizer written in [Mojo](https://mojolang.org/) - it **trains**, encodes, and decodes. Every input finds a representation. Decode returns exactly what encode started with.*
 
