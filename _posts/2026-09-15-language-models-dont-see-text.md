@@ -24,7 +24,7 @@ But compatibility is only part of the story. `mbpe` can also train a tokenizer f
 
 This post builds the background from the ground up before examining how mbpe works, why it is designed this way, and what it takes to make it fast. We'll move from the fundamentals of tokenization to the mechanics of BPE, then into the implementation, its optimizations, and its performance against established alternatives.
 
-The post is deliberately long: it is both an introduction to tokenization and a detailed engineering account. If you're mainly interested in performance, jump to [§10 benchmark](#10-benchmarks). To watch a brand-new tokenizer being built live, skip to [§11](#11-one-more-tokenizer-built-live): One More Tokenizer, Built Live.
+The post is deliberately long: it is both an introduction to tokenization and a detailed engineering account. If you're mainly interested in performance, jump to [§10 benchmark](#10-benchmarks). To watch a brand-new tokenizer being built live, skip to [§11](#11-one-more-tokenizer-built-live) - One More Tokenizer, Built Live.
 
 *Every code excerpt is from `mbpe` at [`ca06186`](https://github.com/ratulb/mbpe/tree/ca06186383a9c9b47f3ca563b8038cffe51f0144); file paths are relative to that revision.*
 
