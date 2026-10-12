@@ -7,7 +7,7 @@ excerpt: "A fast, trainable byte-pair encoding tokenizer in Mojo, byte-for-byte 
 ---
 # Language Models Don't See Text
 
-*A BPE tokenizer written in Mojo - it **trains**, encodes, and decodes. Every input finds a representation. Decode returns exactly what encode started with.*
+*A BPE tokenizer written in [Mojo](https://mojolang.org/) - it **trains**, encodes, and decodes. Every input finds a representation. Decode returns exactly what encode started with.*
 
 
 > **TL;DR:** A language model reads integers, not text. A tokenizer translates both ways. This post shows how byte-pair encoding makes that possible then explores  mbpe — a trainable BPE engine in Mojo.
