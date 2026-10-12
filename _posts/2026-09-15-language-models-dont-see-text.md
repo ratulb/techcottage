@@ -7,15 +7,24 @@ excerpt: "A fast, trainable byte-pair encoding tokenizer in Mojo, byte-for-byte 
 ---
 # Language Models Don't See Text
 
-*A BPE tokenizer in Mojo, built from first principles — it **trains**, encodes, and decodes. Nothing is ever out-of-vocabulary: any input decomposes to bytes and reconstructs exactly on the way back out.*
+*A BPE tokenizer written in Mojo - it **trains**, encodes, and decodes. Every input finds a representation. Decode returns exactly what encode started with.*
 
-> **TL;DR:** A language model never sees text — it sees integer IDs. A tokenizer turns text into those IDs, and it's the first and last thing that touches your data. Byte-pair encoding (BPE) is how those IDs are learned and applied.
->
-> The core type in [`mbpe`](https://github.com/ratulb/mbpe) is `BPETokenizer[PT: PreTokenizer]` — generic over a compile-time pre-tokenizer, so the engine knows only BPE. `GPT-2`, `GPT-4`, and `GPT-4o` are specific `PreTokenizer` implementations; their differences (sequential vs. shuffled byte mapping, split rules, special-token sets) live there, not in the engine.
->
-> The engine is agnostic to the plugged-in `PreTokenizer` implementation. It reads and writes the standard `.tiktoken` format regardless of which one is used. The `.tiktoken` encodings are handled by dedicated `PreTokenizer` implementations, and their vocabulary parity is validated by dedicated tests. Skip to [§10](#10-benchmarks) for the numbers, or [§11](#11-one-more-tokenizer-built-live) to watch a brand-new tokenizer get built live.
->
-> **Note**: This post is long, deliberately. It assumes no prior familiarity with tokenization or its surrounding concepts, building the background from the ground up. It then walks through `mbpe`'s implementation, design choices, and optimizations in detail.
+
+> **TL;DR:** A language model reads integers, not text. A tokenizer translates both ways. This post shows how byte-pair encoding makes that possible then explores  mbpe — a trainable BPE engine in Mojo.
+
+Text is familiar to us. We read words, recognize sentences, and understand meaning. But a language model operates on a different representation: numbers. Before text can enter the model, a tokenizer must turn it into a sequence of token IDs. When those IDs need to become readable text again, the tokenizer must reverse the process.
+
+That translation raises some interesting questions. What should a token represent? How can a finite vocabulary handle words it has never seen before? And how does a tokenizer learn which pieces of text deserve their own IDs?
+
+`mbpe` answers these questions in Mojo. It implements BPE as a reusable engine, with a deliberately narrow responsibility: the engine knows BPE; the encoding-specific rules live in a plug-in. Its core type, `BPETokenizer[PT: PreTokenizer]`, is generic over a compile-time `PreTokenizer`. `GPT-2`, `GPT-4`, and `GPT-4o` each have dedicated implementations that supply their respective byte mappings, splitting rules, and special-token sets without baking those differences into the engine itself.
+
+This separation matters because a tokenizer is more than a BPE algorithm. Its vocabulary and the rules governing how text is split and represented are part of what makes one encoding different from another. And in an ecosystem where OpenAI's `tiktoken` is an established reference point, compatibility matters as much as architecture. `mbpe` reads and writes the standard `.tiktoken` vocabulary format, and its implementations reproduce the GPT-2, GPT-4, and GPT-4o vocabularies byte-for-byte and validates vocabulary parity with an extensive test suite.
+
+But compatibility is only part of the story. `mbpe` can also train a tokenizer from scratch, giving the same engine a life beyond reproducing existing encodings. The result is a Mojo implementation that brings together a reusable BPE core, established encoding compatibility, lossless text reconstruction, and native performance.
+
+This post builds the background from the ground up before examining how mbpe works, why it is designed this way, and what it takes to make it fast. We'll move from the fundamentals of tokenization to the mechanics of BPE, then into the implementation, its optimizations, and its performance against established alternatives.
+
+The post is deliberately long: it is both an introduction to tokenization and a detailed engineering account. If you're mainly interested in performance, jump to [§10 benchmark](#10-benchmarks). To watch a brand-new tokenizer being built live, skip to [§11](#11-one-more-tokenizer-built-live): One More Tokenizer, Built Live.
 
 *Every code excerpt is from `mbpe` at [`ca06186`](https://github.com/ratulb/mbpe/tree/ca06186383a9c9b47f3ca563b8038cffe51f0144); file paths are relative to that revision.*
 
