@@ -1035,7 +1035,7 @@ The **threshold** `SCAN_LIMIT = 32`. Why 32? Because that's roughly the point wh
 **The cost this eliminates**: quadratic blowup on long words. The heap approach reduces the worst case from `O(n²)` to `O(n log n)`, which matters for words like URLs, chemical names, or long identifiers — cases where the BPE vocabulary doesn't cover a whole run and the encoder has to work through many tokens.
 
 ### Layer 6 — Mojo Compile-time specialization
-There's a sixth optimization that isn't a data structure: the whole pipeline is specialized at compile time for the specific pre-tokenizer. That is [§7](#7-one-engine-many-fronts)'s design paying off — the inlining of `byte_to_id` and `split` into `encode` described there. By the time the compiler is done, the encode hot path is one large basic block with the pre-tokenizer's logic woven through it — no calls, no dispatch, no indirection. There is no "runtime vs. compile-time" choice: the generic is instantiated, the specialization is one concrete type, and there's no dispatch to leave in.
+There's a sixth optimization that isn't a data structure: the whole pipeline is specialized at compile time for the specific pre-tokenizer. That is [§7](#7-one-engine-many-fronts)'s design paying off — the inlining of `byte_to_id` and `split` into `encode` described there. By the time the compiler is done, the encode hot path is one large basic block with the pre-tokenizer's logic woven through it — no calls, no dispatch, no indirection. There is no "runtime vs. compile-time" choice: the generic is instantiated, the specialization is one concrete type and dispatch is gone.
 
 **The cost this eliminates**: every indirect call and every branch on tokenizer identity in the hot path.
 
