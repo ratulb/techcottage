@@ -975,7 +975,7 @@ There's a second data structure that makes this possible: `where_dict`. It maps 
 ### Layer 5 — Two encode algorithms
 Encoding is different from training because it doesn't count or merge globally — it merges locally within each word, replaying the rules in rank order. The question is: *how do you find the lowest-rank mergeable pair efficiently*?
 
-There are two answers, and `mbpe` uses both, selected by word length.
+There are two answers and `mbpe` uses both - selected by word length.
 
 **Short words**: `_merge_scan`
 For words shorter than `SCAN_LIMIT = 32` tokens, the encoder uses a simple linear scan (simplified — the real `_merge_scan` works on raw pointers, but the loop is this):
