@@ -1040,7 +1040,7 @@ There's a sixth optimization that isn't a data structure: the whole pipeline is 
 **The cost this eliminates**: every indirect call and every branch on tokenizer identity in the hot path.
 
 ### Which layers matter?
-Benchmarks tell the story, and [§10](#10-benchmarks) has the measured numbers — so rather than reprint a table here, this is the pattern to watch for: the speedup grows with the length of the workload. On short strings, the per-call overhead dominates and the speedup is modest. On long strings and on decode, where the arena and the two encode algorithms really get to work, the speedup is larger. (Training isn't in that chart at all — it's a separate rig, `benchmarks/bm_train.mojo`, as [§10](#10-benchmarks) explains.)
+Benchmarks tell the story, and [§10](#10-benchmarks) has the measured numbers — so rather than reprint a table here, this is the pattern to watch for: the speedup grows with the length of the workload. On short strings, the per-call overhead dominates and the speedup is modest. On long strings and on decode, where the arena and the two encode algorithms really get to work, the speedup is larger. (Training isn't in that chart at all — it's a separate setup, `benchmarks/bm_train.mojo`, as [§10](#10-benchmarks) explains.)
 
 Each layer contributes differently: **Layers 1–2 (`StringSpan`, arena)** matter most on workloads with many small tokens; **Layer 3 (lookup cache)** on encode, where pair lookup is the hot path; **Layer 4 (incremental updates)** only on training, where it's the difference between tractable and hopeless; **Layer 5 (two encode algorithms)** on adversarial inputs like long URLs; **Layer 6 (specialization)** as a background multiplier in every measurement.
 
@@ -1268,7 +1268,7 @@ The claim is narrow: **across all three OpenAI encodings, native Mojo is the fas
 
 ### The measurement
 
-The benchmark rig is simple and reproducible:
+The benchmark setup is simple and reproducible:
 
 - **Corpus:** 5 MB of Alice in Wonderland — real mixed English, not a synthetic pattern.
 - **Metric:** millions of tokens per second (M tok/s), higher is better.
@@ -1287,7 +1287,7 @@ Four implementations are compared:
 
 The first two are `mbpe`. The last two are baselines — the reference implementation most people use, and the fastest non-Mojo implementation available.
 
-*These figures come from a single run on 2026-10-09. The chart image is the committed `ca06186` run on the same rig — same story, slightly different bars; it will be regenerated from the new run before publish.*
+*These figures come from a single run on 2026-10-09. The chart image is the committed `ca06186` run on the same setup — same story, slightly different bars; it will be regenerated from the new run before publish.*
 
 ### Encode throughput
 
@@ -1341,7 +1341,7 @@ The pattern of speedups maps onto [§8](#8-how-it-earns-its-speed)'s five layers
 
 **Layer 5 (two encode algorithms)** shows up on o200k. Its vocabulary has longer merge chains, so words spend more time in the heap-based path — and that path is why the o200k encode margin is still positive despite the extra work.
 
-**Layer 4 (incremental pair counts)** doesn't appear in this chart. It's a training optimization, and these benchmarks are encode/decode on pre-trained vocabularies. Its speedup is real and matters enormously for training, but it's a different measurement on a different rig.
+**Layer 4 (incremental pair counts)** doesn't appear in this chart. It's a training optimization, and these benchmarks are encode/decode on pre-trained vocabularies. Its speedup is real and matters enormously for training, but it's a different measurement on a different setup.
 
 ### The environment
 
@@ -1372,7 +1372,7 @@ Two properties make the generator pleasant to work with:
 
 **Not faster than every possible implementation.** The baselines are `tiktoken` and `tiktoken-rs`, the standard references. A hypothetical hand-tuned C implementation with the same design choices might match or beat `mbpe`. The claim is narrow: fastest among the implementations compared, on this workload.
 
-**Not a training benchmark.** Training requires a different rig, a different metric, and a much larger corpus. The training speedup is real — it's the difference between the incremental pair-count updates and full rescans — but it isn't measured here. The repository has a separate training benchmark (`benchmarks/bm_train.mojo`, plus `benchmarks/bm_training.mojo` for a vocab-size sweep; `bash readme_bench_update.sh` runs the former into `benchmarks/results/training.json`), whose numbers are not part of the encode/decode chart above.
+**Not a training benchmark.** Training requires a different setup, a different metric, and a much larger corpus. The training speedup is real — it's the difference between the incremental pair-count updates and full rescans — but it isn't measured here. The repository has a separate training benchmark (`benchmarks/bm_train.mojo`, plus `benchmarks/bm_training.mojo` for a vocab-size sweep; `bash readme_bench_update.sh` runs the former into `benchmarks/results/training.json`), whose numbers are not part of the encode/decode chart above.
 
 ### Why this matters for the compatibility story
 
