@@ -6,7 +6,7 @@ permalink: /about/
 
 ## About the Author
 
-**ratulb** — System architect with more than two decades of experience in designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo). Currently building **[Tenmo](https://github.com/ratulb/tenmo)**, a tensor/autograd library in Mojo.
+**ratulb** — System architect with 24 years of experience in designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo). Currently building **[Tenmo](https://github.com/ratulb/tenmo)**, a tensor/autograd library in Mojo.
 
 
 [GitHub](https://github.com/ratulb)
