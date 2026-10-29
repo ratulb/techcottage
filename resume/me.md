@@ -4,7 +4,7 @@ title: Resume
 permalink: /resume/
 ---
 
-[Download PDF](/assets/me.pdf)
+[Download PDF]({{ '/assets/me.pdf' | relative_url }})
 
 
 ## RATUL BURAGOHAIN
