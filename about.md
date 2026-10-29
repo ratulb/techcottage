@@ -9,7 +9,9 @@ permalink: /about/
 **ratulb** — System architect with 24 years of experience in designing secure, high-performance distributed systems. Polyglot programmer (Rust, Java, Scala, Python, Mojo). Currently building **[Tenmo](https://github.com/ratulb/tenmo)**, a tensor/autograd library in Mojo.
 
 
-[GitHub](https://github.com/ratulb)
+[GitHub Profile](https://github.com/ratulb)
+
+[Hiring or referring? See my resume →](/resume/)
 
 ## Tech Cottage
 
