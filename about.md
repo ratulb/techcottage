@@ -39,4 +39,4 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 - [Solana: On-Chain Contract & Off-Chain Client in Rust](https://ratulb.github.io/solana_program_and_rust_client/index.html)
 
 ### Tools
-- [LLM Mediator](https://llm-mediator.vercel.app/)
+- [LLM Mediator](https://llm-mediator.vercel.app/) - A [⚛️](https://react.dev/) React front-end mediator layer for LLM interactions.
