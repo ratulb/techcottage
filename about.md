@@ -36,7 +36,6 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
   
 ### Blockchain
-- [Solana: On-Chain Contract & Off-Chain Client in Rust](https://ratulb.github.io/solana_program_and_rust_client/index.html)
-
+- [Solana](https://ratulb.github.io/solana_program_and_rust_client/index.html) — an on-chain counter program with an off-chain Rust client that sends increments and reads the counter's state.
 ### Tools
 - [LLM Mediator](https://llm-mediator.vercel.app/) - A [⚛️](https://react.dev/) React front-end mediator layer for LLM interactions.
