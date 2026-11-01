@@ -11,7 +11,7 @@ permalink: /about/
 
 [GitHub Profile](https://github.com/ratulb)
 
-[Hiring or referring? See my resume →]({{ '/resume/' | relative_url }})
+<!--[Hiring or referring? See my resume →]({{ '/resume/' | relative_url }})-->
 
 ## Tech Cottage
 
