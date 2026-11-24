@@ -281,4 +281,4 @@ To watch a new run, pass `--verbose` to `./chaos run`. To reproduce the reportin
 
 [1] [AWS Prescriptive Guidance - Overview of chaos engineering](https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/overview.html)
 
-[2] [Microsoft Azure Architecture Center - Event Sourcing pattern]: https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing)
+[2] [Microsoft Azure Architecture Center - Event Sourcing pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing)
