@@ -1,5 +1,5 @@
 ---
-title: "Printing the Agent–LLM Conversation: Tracing a Kubernetes Chaos Test Through a Python State Machine"
+title: "Tracing a Kubernetes Chaos Test Through a Python State Machine"
 date: "2026-11-24"
 categories: ["Software Engineering", "Agent Systems"]
 tags: ["python", "kubernetes", "etcd", "llm-agents", "state-machines", "observability"]
