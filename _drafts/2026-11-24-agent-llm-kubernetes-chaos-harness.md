@@ -1,5 +1,5 @@
 ---
-title: "Printing the Agent–LLM Conversation: Tracing a Kubernetes Chaos Test Through a Python State Machine"
+title: "Tracing a Kubernetes Chaos Test Through a Python State Machine"
 date: "2026-11-24"
 categories: ["Software Engineering", "Agent Systems"]
 tags: ["python", "kubernetes", "etcd", "llm-agents", "state-machines", "observability"]
@@ -279,6 +279,6 @@ To watch a new run, pass `--verbose` to `./chaos run`. To reproduce the reportin
 
 ## Appendix: references
 
-[1] AWS Prescriptive Guidance, "Overview of chaos engineering": https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/overview.html
+[1] [AWS Prescriptive Guidance - Overview of chaos engineering](https://docs.aws.amazon.com/prescriptive-guidance/latest/chaos-engineering-on-aws/overview.html)
 
-[2] Microsoft Azure Architecture Center, "Event Sourcing pattern": https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing
+[2] [Microsoft Azure Architecture Center - Event Sourcing pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing)
