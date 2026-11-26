@@ -28,6 +28,7 @@ A collection of notes, experiments, and deep dives into **Mojo**, **Rust**, **Ku
 
 ### Kubernetes & Infrastructure
 - [k8s-easy-install](https://github.com/ratulb/k8s-easy-install) — One-script Kubernetes cluster setup via SSH menu (haproxy/nginx/envoy). No Ansible, no manual per-machine login.
+- [k8s-chaos-harness](https://github.com/ratulb/k8s-chaos-harness) — Benchmark for testing whether an LLM can diagnose and repair real etcd failures on live Kubernetes clusters.
 - [kube-etcd-switch](https://github.com/ratulb/kube-etcd-switch) — Hassle-free switch between stacked and external etcd. State/snapshot backup, restore, and disaster recovery for Kubernetes clusters.
 - [k8s-cluster-from-source](https://github.com/ratulb/k8s-cluster-from-source) — Build a Kubernetes cluster from latest sources in LXD containers step by step, without kubeadm.
 
